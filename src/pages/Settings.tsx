@@ -35,21 +35,8 @@ export default function SettingsPage() {
   const { data: dbSettings, isLoading } = useCompanySettings();
   const updateSettings = useUpdateCompanySettings();
 
-  const [localSettings, setLocalSettings] = useState<Record<string, string> | null>(null);
+  const [localSettings, setLocalSettings] = useState<Record<string, any> | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // Notification prefs (local only for now)
-  const [notifBudgetApproved, setNotifBudgetApproved] = useState(true);
-  const [notifPaymentReceived, setNotifPaymentReceived] = useState(true);
-  const [notifBudgetExpiring, setNotifBudgetExpiring] = useState(true);
-  const [notifWeeklyReport, setNotifWeeklyReport] = useState(false);
-
-  // Document prefs (local only for now)
-  const [docShowLogo, setDocShowLogo] = useState(true);
-  const [docShowPhone, setDocShowPhone] = useState(true);
-  const [docShowAddress, setDocShowAddress] = useState(true);
-  const [docFooterText, setDocFooterText] = useState("Orçamento válido por 15 dias. Valores sujeitos a alteração sem aviso prévio.");
-  const [docValidityDays, setDocValidityDays] = useState("15");
 
   const settings = localSettings || (dbSettings ? {
     razaoSocial: dbSettings.razao_social,
@@ -66,9 +53,18 @@ export default function SettingsPage() {
     themeColor: dbSettings.theme_color,
     logo: dbSettings.logo || "",
     pixQrCode: dbSettings.pix_qr_code || "",
+    docShowLogo: dbSettings.doc_show_logo,
+    docShowPhone: dbSettings.doc_show_phone,
+    docShowAddress: dbSettings.doc_show_address,
+    docFooterText: dbSettings.doc_footer_text,
+    docValidityDays: String(dbSettings.doc_validity_days),
+    notifBudgetApproved: dbSettings.notif_budget_approved,
+    notifPaymentReceived: dbSettings.notif_payment_received,
+    notifBudgetExpiring: dbSettings.notif_budget_expiring,
+    notifWeeklyReport: dbSettings.notif_weekly_report,
   } : null);
 
-  const update = (field: string, value: string) => {
+  const update = (field: string, value: string | boolean | number) => {
     setLocalSettings(prev => ({ ...(prev || settings || {}), [field]: value }));
     setHasChanges(true);
   };
@@ -92,6 +88,15 @@ export default function SettingsPage() {
         theme_color: settings.themeColor,
         logo: settings.logo || null,
         pix_qr_code: settings.pixQrCode || null,
+        doc_show_logo: settings.docShowLogo,
+        doc_show_phone: settings.docShowPhone,
+        doc_show_address: settings.docShowAddress,
+        doc_footer_text: settings.docFooterText,
+        doc_validity_days: parseInt(settings.docValidityDays) || 15,
+        notif_budget_approved: settings.notifBudgetApproved,
+        notif_payment_received: settings.notifPaymentReceived,
+        notif_budget_expiring: settings.notifBudgetExpiring,
+        notif_weekly_report: settings.notifWeeklyReport,
       },
     });
     setHasChanges(false);
@@ -176,26 +181,26 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label>Validade padrão (dias)</Label><Input type="number" min="1" max="90" value={docValidityDays} onChange={(e) => { setDocValidityDays(e.target.value); setHasChanges(true); }} /></div>
+                <div><Label>Validade padrão (dias)</Label><Input type="number" min="1" max="90" value={settings.docValidityDays} onChange={(e) => update("docValidityDays", e.target.value)} /></div>
               </div>
               <Separator />
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold">Exibir no cabeçalho</h4>
                 {[
-                  { label: "Logo da empresa", desc: "Mostra a logo no topo do documento", checked: docShowLogo, onChange: setDocShowLogo },
-                  { label: "Telefone de contato", desc: "Exibe o telefone da empresa", checked: docShowPhone, onChange: setDocShowPhone },
-                  { label: "Endereço completo", desc: "Mostra o endereço no cabeçalho", checked: docShowAddress, onChange: setDocShowAddress },
+                  { label: "Logo da empresa", desc: "Mostra a logo no topo do documento", checked: settings.docShowLogo, field: "docShowLogo" },
+                  { label: "Telefone de contato", desc: "Exibe o telefone da empresa", checked: settings.docShowPhone, field: "docShowPhone" },
+                  { label: "Endereço completo", desc: "Mostra o endereço no cabeçalho", checked: settings.docShowAddress, field: "docShowAddress" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between rounded-lg border p-3">
                     <div><p className="text-sm font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
-                    <Switch checked={item.checked} onCheckedChange={(v) => { item.onChange(v); setHasChanges(true); }} />
+                    <Switch checked={item.checked} onCheckedChange={(v) => update(item.field, v)} />
                   </div>
                 ))}
               </div>
               <Separator />
               <div>
                 <Label>Texto do rodapé</Label>
-                <Textarea value={docFooterText} onChange={(e) => { setDocFooterText(e.target.value); setHasChanges(true); }} rows={3} placeholder="Texto exibido no rodapé dos orçamentos…" />
+                <Textarea value={settings.docFooterText} onChange={(e) => update("docFooterText", e.target.value)} rows={3} placeholder="Texto exibido no rodapé dos orçamentos…" />
                 <p className="text-xs text-muted-foreground mt-1">Este texto aparece ao final de cada orçamento emitido.</p>
               </div>
             </CardContent>
@@ -206,21 +211,21 @@ export default function SettingsPage() {
               <div className="border rounded-lg p-5 bg-background space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    {docShowLogo && (settings.logo ? <img src={settings.logo} alt="Logo" className="h-8 max-w-[120px] object-contain" /> : <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>)}
+                    {settings.docShowLogo && (settings.logo ? <img src={settings.logo} alt="Logo" className="h-8 max-w-[120px] object-contain" /> : <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>)}
                     <p className="font-bold text-sm">{settings.nomeFantasia || settings.razaoSocial}</p>
                     <p className="text-[11px] text-muted-foreground">{settings.razaoSocial}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">{settings.cnpj}</p>
                   </div>
                   <div className="text-right text-[11px] text-muted-foreground space-y-0.5">
-                    {docShowPhone && <p>{settings.phone}</p>}
+                    {settings.docShowPhone && <p>{settings.phone}</p>}
                     <p>{settings.email}</p>
-                    {docShowAddress && <p>{settings.street}, {settings.neighborhood}<br />{settings.city} - {settings.state}, {settings.cep}</p>}
+                    {settings.docShowAddress && <p>{settings.street}, {settings.neighborhood}<br />{settings.city} - {settings.state}, {settings.cep}</p>}
                   </div>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-[11px]">
                   <span className="font-semibold">ORÇAMENTO Nº ORC-001</span>
-                  <span className="text-muted-foreground">Válido por {docValidityDays} dias</span>
+                  <span className="text-muted-foreground">Válido por {settings.docValidityDays} dias</span>
                 </div>
               </div>
             </CardContent>
@@ -297,17 +302,17 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {[
-                { label: "Orçamento aprovado", desc: "Notificar quando um cliente aprovar um orçamento", checked: notifBudgetApproved, onChange: setNotifBudgetApproved, icon: FileText },
-                { label: "Pagamento recebido", desc: "Notificar ao registrar um novo pagamento", checked: notifPaymentReceived, onChange: setNotifPaymentReceived, icon: Shield },
-                { label: "Orçamento expirando", desc: "Alertar quando um orçamento estiver próximo da validade", checked: notifBudgetExpiring, onChange: setNotifBudgetExpiring, icon: Bell },
-                { label: "Relatório semanal", desc: "Enviar resumo semanal de atividades por e-mail", checked: notifWeeklyReport, onChange: setNotifWeeklyReport, icon: Globe },
+                { label: "Orçamento aprovado", desc: "Notificar quando um cliente aprovar um orçamento", checked: settings.notifBudgetApproved, field: "notifBudgetApproved", icon: FileText },
+                { label: "Pagamento recebido", desc: "Notificar ao registrar um novo pagamento", checked: settings.notifPaymentReceived, field: "notifPaymentReceived", icon: Shield },
+                { label: "Orçamento expirando", desc: "Alertar quando um orçamento estiver próximo da validade", checked: settings.notifBudgetExpiring, field: "notifBudgetExpiring", icon: Bell },
+                { label: "Relatório semanal", desc: "Enviar resumo semanal de atividades por e-mail", checked: settings.notifWeeklyReport, field: "notifWeeklyReport", icon: Globe },
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center"><item.icon className="h-4 w-4 text-primary" /></div>
                     <div><p className="text-sm font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
                   </div>
-                  <Switch checked={item.checked} onCheckedChange={(v) => { item.onChange(v); setHasChanges(true); }} />
+                  <Switch checked={item.checked} onCheckedChange={(v) => update(item.field, v)} />
                 </div>
               ))}
             </CardContent>

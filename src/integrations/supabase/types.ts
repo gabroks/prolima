@@ -208,12 +208,21 @@ export type Database = {
           city: string
           cnpj: string
           created_at: string
+          doc_footer_text: string
+          doc_show_address: boolean
+          doc_show_logo: boolean
+          doc_show_phone: boolean
+          doc_validity_days: number
           email: string
           id: string
           inscricao_estadual: string
           logo: string | null
           neighborhood: string
           nome_fantasia: string
+          notif_budget_approved: boolean
+          notif_budget_expiring: boolean
+          notif_payment_received: boolean
+          notif_weekly_report: boolean
           phone: string
           pix_qr_code: string | null
           razao_social: string
@@ -227,12 +236,21 @@ export type Database = {
           city?: string
           cnpj?: string
           created_at?: string
+          doc_footer_text?: string
+          doc_show_address?: boolean
+          doc_show_logo?: boolean
+          doc_show_phone?: boolean
+          doc_validity_days?: number
           email?: string
           id?: string
           inscricao_estadual?: string
           logo?: string | null
           neighborhood?: string
           nome_fantasia?: string
+          notif_budget_approved?: boolean
+          notif_budget_expiring?: boolean
+          notif_payment_received?: boolean
+          notif_weekly_report?: boolean
           phone?: string
           pix_qr_code?: string | null
           razao_social?: string
@@ -246,12 +264,21 @@ export type Database = {
           city?: string
           cnpj?: string
           created_at?: string
+          doc_footer_text?: string
+          doc_show_address?: boolean
+          doc_show_logo?: boolean
+          doc_show_phone?: boolean
+          doc_validity_days?: number
           email?: string
           id?: string
           inscricao_estadual?: string
           logo?: string | null
           neighborhood?: string
           nome_fantasia?: string
+          notif_budget_approved?: boolean
+          notif_budget_expiring?: boolean
+          notif_payment_received?: boolean
+          notif_weekly_report?: boolean
           phone?: string
           pix_qr_code?: string | null
           razao_social?: string
