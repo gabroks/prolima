@@ -19,15 +19,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Set up auth listener BEFORE getSession (Supabase best practice)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Then get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -37,8 +37,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error as Error | null };
+
+    // Check if user profile is active
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("active")
+        .eq("user_id", data.user.id)
+        .single();
+
+      if (profile && !profile.active) {
+        await supabase.auth.signOut();
+        return { error: new Error("Sua conta está desativada. Entre em contato com o administrador.") };
+      }
+    }
+
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string) => {

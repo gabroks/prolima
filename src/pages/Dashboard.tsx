@@ -5,7 +5,8 @@ import { useMaterials } from "@/hooks/useMaterials";
 import { useBudgets } from "@/hooks/useBudgets";
 import { usePayments } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
-import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
+import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -30,8 +31,12 @@ export default function Dashboard() {
   const { data: budgets = [], isLoading: loadingBudgets } = useBudgets();
   const { data: payments = [], isLoading: loadingPayments } = usePayments();
   const { data: expenses = [], isLoading: loadingExpenses } = useExpenses();
+  const { data: profile } = useCurrentProfile();
 
   const isLoading = loadingClients || loadingBudgets || loadingMaterials || loadingPayments || loadingExpenses;
+
+  const userName = profile?.name || profile?.email?.split("@")[0] || "";
+  const todayFormatted = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   // Current month filter for financial data
   const currentMonthKey = useMemo(() => {
@@ -91,15 +96,22 @@ export default function Dashboard() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            {getGreeting()}! <Sparkles className="h-5 w-5 text-primary" />
+            {getGreeting()}{userName ? `, ${userName}` : ""}! <Sparkles className="h-5 w-5 text-primary" />
           </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {pendingBudgets.length > 0 ? (
-              <>Você tem <span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}orçamento{pendingBudgets.length !== 1 && "s"} pendente{pendingBudgets.length !== 1 && "s"}</>
-            ) : (
-              "Tudo em dia — nenhuma pendência no momento 🎉"
-            )}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 capitalize">
+              <CalendarDays className="h-3.5 w-3.5" />
+              {todayFormatted}
+            </p>
+            <span className="text-muted-foreground/40">•</span>
+            <p className="text-xs text-muted-foreground">
+              {pendingBudgets.length > 0 ? (
+                <><span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}pendência{pendingBudgets.length !== 1 && "s"}</>
+              ) : (
+                "Tudo em dia 🎉"
+              )}
+            </p>
+          </div>
         </div>
         <QuickActions />
       </div>

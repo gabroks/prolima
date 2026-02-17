@@ -11,8 +11,6 @@ import {
   SidebarHeader, SidebarFooter, SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +19,7 @@ import { getInitials } from "@/lib/formatters";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
+import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 
 interface MenuItem {
   title: string;
@@ -98,7 +97,8 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const displayName = user?.email?.split("@")[0] || "Usuário";
+  const { data: profile } = useCurrentProfile();
+  const displayName = profile?.name || user?.email?.split("@")[0] || "Usuário";
   const displayEmail = user?.email || "usuario@email.com";
   const initials = getInitials(displayName);
   const { theme, setTheme } = useTheme();
