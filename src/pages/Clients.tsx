@@ -10,22 +10,26 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { mockClients, mockBudgets, mockPayments } from "@/data/mock";
-import { Client } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useToggleClientStatus, ClientForm, DbClient } from "@/hooks/useClients";
 import {
   Plus, Search, Pencil, Trash2, Users, UserCheck, UserX, Building2,
-  ArrowUpDown, Phone, Mail, MapPin, MessageCircle, ExternalLink,
+  ArrowUpDown, Phone, Mail, MapPin, MessageCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 import { formatDate, formatCurrency } from "@/lib/formatters";
 
 type SortKey = "name" | "date-desc" | "date-asc" | "city";
 
-const emptyForm: Partial<Client> = { personType: "fisica", status: "active" };
+const emptyForm: ClientForm = { name: "", phone: "", personType: "fisica", document: "", status: "active" };
 
 export default function Clients() {
   const navigate = useNavigate();
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const { data: clients = [], isLoading } = useClients();
+  const createClient = useCreateClient();
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
+  const toggleStatus = useToggleClientStatus();
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -33,99 +37,74 @@ export default function Clients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Client>>(emptyForm);
+  const [form, setForm] = useState<ClientForm>(emptyForm);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let result = clients.filter((c) => {
       const matchSearch = !q || c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q) || (c.document?.includes(q)) ||
-        (c.email?.toLowerCase().includes(q)) ||
-        (c.city?.toLowerCase().includes(q)) ||
-        (c.razaoSocial?.toLowerCase().includes(q));
+        c.phone.includes(q) || c.document?.includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.city?.toLowerCase().includes(q) ||
+        c.razao_social?.toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || c.status === statusFilter;
-      const matchType = typeFilter === "all" || c.personType === typeFilter;
+      const matchType = typeFilter === "all" || c.person_type === typeFilter;
       return matchSearch && matchStatus && matchType;
     });
 
     switch (sortBy) {
       case "name": result.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case "date-desc": result.sort((a, b) => b.createdAt.localeCompare(a.createdAt)); break;
-      case "date-asc": result.sort((a, b) => a.createdAt.localeCompare(b.createdAt)); break;
+      case "date-desc": result.sort((a, b) => b.created_at.localeCompare(a.created_at)); break;
+      case "date-asc": result.sort((a, b) => a.created_at.localeCompare(b.created_at)); break;
       case "city": result.sort((a, b) => (a.city || "").localeCompare(b.city || "")); break;
     }
     return result;
   }, [clients, search, statusFilter, typeFilter, sortBy]);
 
   const activeCount = clients.filter(c => c.status === "active").length;
-  const pjCount = clients.filter(c => c.personType === "juridica").length;
-  const cities = useMemo(() => [...new Set(clients.map(c => c.city).filter(Boolean))], [clients]);
-
-  // Budget count per client
-  const budgetCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    mockBudgets.forEach(b => { map[b.clientId] = (map[b.clientId] || 0) + 1; });
-    return map;
-  }, []);
-
-  // Revenue per client
-  const clientRevenue = useMemo(() => {
-    const map: Record<string, number> = {};
-    mockPayments.forEach(p => {
-      const budget = mockBudgets.find(b => b.id === p.budgetId);
-      if (budget) map[budget.clientId] = (map[budget.clientId] || 0) + p.amount;
-    });
-    return map;
-  }, []);
+  const pjCount = clients.filter(c => c.person_type === "juridica").length;
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (client: Client, e: React.MouseEvent) => {
+  const openEdit = (client: DbClient, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(client.id);
-    setForm({ ...client });
+    setForm({
+      name: client.name, phone: client.phone,
+      personType: client.person_type as "fisica" | "juridica",
+      document: client.document,
+      razaoSocial: client.razao_social || undefined,
+      nomeFantasia: client.nome_fantasia || undefined,
+      contact: client.contact || undefined,
+      email: client.email || undefined,
+      neighborhood: client.neighborhood || undefined,
+      city: client.city || undefined,
+      address: client.address || undefined,
+      status: client.status as "active" | "inactive",
+    });
     setDialogOpen(true);
   };
 
   const handleSave = () => {
     if (!form.name || !form.phone || !form.document) {
-      toast.error("Preencha os campos obrigatórios: Nome, Telefone e Documento");
       return;
     }
     if (editingId) {
-      setClients(prev => prev.map(c => c.id === editingId ? { ...c, ...form } as Client : c));
-      toast.success("Cliente atualizado!");
+      updateClient.mutate({ id: editingId, form });
     } else {
-      const newClient: Client = {
-        id: Date.now().toString(),
-        name: form.name!, phone: form.phone!,
-        personType: form.personType || "fisica",
-        document: form.document!,
-        razaoSocial: form.razaoSocial, nomeFantasia: form.nomeFantasia,
-        contact: form.contact, email: form.email,
-        neighborhood: form.neighborhood, city: form.city, address: form.address,
-        status: "active",
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setClients(prev => [...prev, newClient]);
-      toast.success("Cliente cadastrado!");
+      createClient.mutate(form);
     }
     setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    setClients(prev => prev.filter(c => c.id !== deleteId));
+    deleteClient.mutate(deleteId);
     setDeleteId(null);
-    toast.success("Cliente removido!");
   };
 
-  const toggleStatus = (id: string, e: React.MouseEvent) => {
+  const handleToggleStatus = (id: string, currentStatus: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const client = clients.find(c => c.id === id);
-    setClients(prev => prev.map(c =>
-      c.id === id ? { ...c, status: c.status === "active" ? "inactive" as const : "active" as const } : c
-    ));
-    toast.success(`${client?.name} ${client?.status === "active" ? "desativado" : "ativado"}`);
+    toggleStatus.mutate({ id, currentStatus });
   };
 
   const formatWhatsApp = (phone: string) => {
@@ -133,7 +112,19 @@ export default function Clients() {
     return `https://wa.me/55${digits}`;
   };
 
-  const updateField = (field: keyof Client, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof ClientForm, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -214,8 +205,6 @@ export default function Clients() {
                 <TableHead>Cliente</TableHead>
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
                 <TableHead className="hidden lg:table-cell">Localização</TableHead>
-                <TableHead className="hidden sm:table-cell">Orçamentos</TableHead>
-                <TableHead className="hidden sm:table-cell">Receita</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -223,7 +212,7 @@ export default function Clients() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                     <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || statusFilter !== "all" || typeFilter !== "all" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</p>
                     {!search && statusFilter === "all" && typeFilter === "all" && (
@@ -240,11 +229,10 @@ export default function Clients() {
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-primary hover:underline">{c.name}</p>
                         <Badge variant="outline" className="text-[9px] h-4 px-1">
-                          {c.personType === "fisica" ? "PF" : "PJ"}
+                          {c.person_type === "fisica" ? "PF" : "PJ"}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground font-mono mt-0.5">{c.document}</p>
-                      {/* Mobile contact */}
                       <div className="flex gap-2 mt-1 md:hidden">
                         <a href={`tel:${c.phone}`} className="text-xs text-primary flex items-center gap-1" onClick={e => e.stopPropagation()}>
                           <Phone className="h-3 w-3" />{c.phone}
@@ -272,19 +260,11 @@ export default function Clients() {
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <span className="text-sm font-semibold tabular-nums">{budgetCounts[c.id] || 0}</span>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <span className="text-sm font-semibold tabular-nums text-primary">
-                      {clientRevenue[c.id] ? formatCurrency(clientRevenue[c.id]) : "—"}
-                    </span>
-                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={c.status === "active" ? "default" : "secondary"}
                       className="cursor-pointer select-none"
-                      onClick={(e) => toggleStatus(c.id, e)}
+                      onClick={(e) => handleToggleStatus(c.id, c.status, e)}
                     >
                       {c.status === "active" ? "Ativo" : "Inativo"}
                     </Badge>
@@ -389,7 +369,9 @@ export default function Clients() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editingId ? "Atualizar" : "Salvar"}</Button>
+            <Button onClick={handleSave} disabled={createClient.isPending || updateClient.isPending}>
+              {editingId ? "Atualizar" : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
