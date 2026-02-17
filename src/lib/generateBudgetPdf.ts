@@ -4,92 +4,193 @@ import type { BudgetWithItems } from "@/hooks/useBudgets";
 import type { DbCompanySettings } from "@/hooks/useCompanySettings";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
-export function generateBudgetPdf(budget: BudgetWithItems, company?: DbCompanySettings | null) {
+const PRIMARY: [number, number, number] = [45, 138, 94];
+const DARK: [number, number, number] = [30, 30, 30];
+const GRAY: [number, number, number] = [120, 120, 120];
+const GOLD: [number, number, number] = [218, 165, 32];
+const WHITE: [number, number, number] = [255, 255, 255];
+
+function drawRoundedRect(doc: jsPDF, x: number, y: number, w: number, h: number, r: number, style: "S" | "F" | "FD" = "S") {
+  doc.roundedRect(x, y, w, h, r, r, style);
+}
+
+function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, borderColor: [number, number, number] = PRIMARY, fillColor?: [number, number, number]) {
+  if (fillColor) {
+    doc.setFillColor(...fillColor);
+  }
+  doc.setDrawColor(...borderColor);
+  doc.setLineWidth(0.5);
+  drawRoundedRect(doc, x, y, w, h, 2, fillColor ? "FD" : "S");
+}
+
+function drawSectionTitle(doc: jsPDF, title: string, x: number, y: number, w: number) {
+  doc.setFillColor(...PRIMARY);
+  doc.rect(x, y, w, 7, "F");
+  doc.setTextColor(...WHITE);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text(title, x + 3, y + 5);
+}
+
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCompanySettings | null) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 15;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 12;
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
 
-  const primaryColor: [number, number, number] = [45, 138, 94]; // default green
-  const darkColor: [number, number, number] = [30, 30, 30];
-  const grayColor: [number, number, number] = [120, 120, 120];
-  const lightBg: [number, number, number] = [245, 245, 245];
+  // ─── Header ───
+  // Logo (left)
+  let logoEndX = margin;
+  if (company?.logo) {
+    try {
+      const logoData = await loadImageAsBase64(company.logo);
+      if (logoData) {
+        doc.addImage(logoData, "PNG", margin, y, 40, 18);
+        logoEndX = margin + 42;
+      }
+    } catch { /* no logo */ }
+  }
 
-  // ─── Header bar ───
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 38, "F");
-
-  doc.setTextColor(255, 255, 255);
+  // Title (center)
+  doc.setFillColor(...PRIMARY);
+  const titleW = 70;
+  const titleX = (pageWidth - titleW) / 2;
+  drawRoundedRect(doc, titleX, y, titleW, 18, 3, "F");
+  doc.setTextColor(...WHITE);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text(company?.nome_fantasia || company?.razao_social || "ORÇAMENTO", margin, 16);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  if (company) {
-    const lines: string[] = [];
-    if (company.cnpj) lines.push(`CNPJ: ${company.cnpj}`);
-    if (company.phone) lines.push(`Tel: ${company.phone}`);
-    if (company.email) lines.push(company.email);
-    const address = [company.street, company.neighborhood, company.city, company.state].filter(Boolean).join(", ");
-    if (address) lines.push(address);
-    if (company.cep) lines.push(`CEP: ${company.cep}`);
-    lines.forEach((line, i) => {
-      doc.text(line, margin, 24 + i * 4);
-    });
-  }
-
-  // Budget number on right
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text(budget.number, pageWidth - margin, 16, { align: "right" });
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Data: ${formatDate(budget.created_at)}`, pageWidth - margin, 24, { align: "right" });
-  if (budget.validity_date) {
-    doc.text(`Validade: ${formatDate(budget.validity_date)}`, pageWidth - margin, 28, { align: "right" });
-  }
-  if (budget.delivery_date) {
-    doc.text(`Entrega: ${formatDate(budget.delivery_date)}`, pageWidth - margin, 32, { align: "right" });
-  }
-
-  y = 46;
-
-  // ─── Client info ───
+  doc.text("ORÇAMENTO", pageWidth / 2, y + 8, { align: "center" });
   doc.setFontSize(10);
+  doc.text(budget.number, pageWidth / 2, y + 15, { align: "center" });
+
+  // PIX QR Code (right)
+  if (company?.pix_qr_code) {
+    try {
+      const qrData = await loadImageAsBase64(company.pix_qr_code);
+      if (qrData) {
+        doc.addImage(qrData, "PNG", pageWidth - margin - 25, y - 2, 25, 25);
+      }
+    } catch { /* no qr */ }
+  }
+
+  y += 24;
+
+  // ─── Company info box ───
+  drawSectionBox(doc, margin, y, contentWidth, 18, PRIMARY, [248, 248, 248]);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...darkColor);
-  doc.text("CLIENTE", margin, y);
-  y += 5;
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(budget.client_name, margin, y);
-  y += 5;
-  if (budget.service_description) {
+  doc.setTextColor(...DARK);
+  const companyName = company?.nome_fantasia || company?.razao_social || "EMPRESA";
+  doc.text(companyName, margin + 3, y + 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  const companyLines: string[] = [];
+  if (company?.phone) companyLines.push(`Tel: ${company.phone}`);
+  if (company?.email) companyLines.push(`Email: ${company.email}`);
+  const address = [company?.street, company?.neighborhood, company?.city, company?.state].filter(Boolean).join(", ");
+  if (address) companyLines.push(address);
+  companyLines.forEach((line, i) => {
+    doc.text(line, margin + 3, y + 9 + i * 3.5);
+  });
+
+  y += 22;
+
+  // ─── Client info box (gold border) ───
+  const clientBoxH = 16;
+  drawSectionTitle(doc, "INFORMAÇÕES DO CLIENTE", margin, y, contentWidth);
+  y += 7;
+  drawSectionBox(doc, margin, y, contentWidth, clientBoxH, GOLD);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...DARK);
+  doc.text(budget.client_name, margin + 3, y + 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  // We don't have client phone/email on budget, just show name
+  y += clientBoxH + 4;
+
+  // ─── Dates row ───
+  const dateColW = contentWidth / 3;
+  const dateBoxH = 12;
+  const dates = [
+    { label: "EMISSÃO", value: formatDate(budget.created_at) },
+    { label: "VALIDADE", value: budget.validity_date ? formatDate(budget.validity_date) : "—" },
+    { label: "PREV. ENTREGA", value: budget.delivery_date ? formatDate(budget.delivery_date) : "—" },
+  ];
+  dates.forEach((d, i) => {
+    const dx = margin + i * dateColW;
+    drawSectionBox(doc, dx, y, dateColW, dateBoxH, [200, 200, 200]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...GRAY);
+    doc.text(d.label, dx + dateColW / 2, y + 4, { align: "center" });
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(...grayColor);
+    doc.setTextColor(...DARK);
+    doc.text(d.value, dx + dateColW / 2, y + 9.5, { align: "center" });
+  });
+  y += dateBoxH + 4;
+
+  // ─── Service description ───
+  if (budget.service_description) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...PRIMARY);
+    doc.text("DESCRIÇÃO DO SERVIÇO", margin, y);
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y + 1.5, margin + 55, y + 1.5);
+    y += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...DARK);
     const descLines = doc.splitTextToSize(budget.service_description, contentWidth);
     doc.text(descLines, margin, y);
-    y += descLines.length * 4 + 2;
+    y += descLines.length * 3.5 + 4;
   }
 
+  // ─── Materials table ───
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...PRIMARY);
+  doc.text("MATERIAIS E SERVIÇOS", margin, y);
+  doc.setDrawColor(...PRIMARY);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y + 1.5, margin + 55, y + 1.5);
   y += 4;
 
-  // ─── Items table ───
   const items = budget.budget_items || [];
-  const tableHead = [["#", "Material", "Dimensões", "Qtd", "Unid.", "Preço Unit.", "Total"]];
+  const tableHead = [["#", "DESCRIÇÃO", "UN", "L", "A", "QTD", "PREÇO", "SUBTOTAL"]];
   const tableBody = items.map((item, i) => {
     const w = Number(item.width);
     const h = Number(item.height);
-    const area = item.unit === "m²" && w > 0 && h > 0 ? (w / 100) * (h / 100) : 0;
-    const dims = w > 0 && h > 0 ? `${w} × ${h} cm${area > 0 ? ` (${area.toFixed(2)} m²)` : ""}` : "—";
+    const desc = item.material_name + (item.notes ? `\nObs: ${item.notes}` : "");
     return [
       String(i + 1),
-      item.material_name + (item.notes ? `\n${item.notes}` : ""),
-      dims,
-      String(item.qty),
+      desc,
       item.unit,
+      w > 0 ? String(w) : "-",
+      h > 0 ? String(h) : "-",
+      String(item.qty),
       formatCurrency(Number(item.unit_price)),
       formatCurrency(Number(item.total)),
     ];
@@ -101,117 +202,142 @@ export function generateBudgetPdf(budget: BudgetWithItems, company?: DbCompanySe
     body: tableBody,
     margin: { left: margin, right: margin },
     styles: {
-      fontSize: 8.5,
+      fontSize: 8,
       cellPadding: 2.5,
       lineColor: [220, 220, 220],
-      lineWidth: 0.3,
+      lineWidth: 0.2,
     },
     headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
+      fillColor: PRIMARY,
+      textColor: WHITE,
       fontStyle: "bold",
-      fontSize: 8,
+      fontSize: 7.5,
     },
     alternateRowStyles: {
       fillColor: [250, 250, 250],
     },
     columnStyles: {
-      0: { halign: "center", cellWidth: 10 },
+      0: { halign: "center", cellWidth: 8 },
       1: { cellWidth: "auto" },
-      2: { cellWidth: 35 },
-      3: { halign: "center", cellWidth: 15 },
-      4: { halign: "center", cellWidth: 15 },
-      5: { halign: "right", cellWidth: 28 },
-      6: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+      2: { halign: "center", cellWidth: 14 },
+      3: { halign: "center", cellWidth: 12 },
+      4: { halign: "center", cellWidth: 12 },
+      5: { halign: "center", cellWidth: 14 },
+      6: { halign: "right", cellWidth: 24 },
+      7: { halign: "right", cellWidth: 28, fontStyle: "bold" },
     },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 8;
+  y = (doc as any).lastAutoTable.finalY + 4;
 
-  // ─── Totals section ───
-  const totalsX = pageWidth - margin - 80;
+  // ─── Payment terms box ───
+  if (budget.payment_terms) {
+    drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth);
+    y += 7;
+    drawSectionBox(doc, margin, y, contentWidth, 10, [200, 200, 200]);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...DARK);
+    doc.text(budget.payment_terms, margin + 3, y + 5);
+    y += 14;
+  }
+
+  // ─── Totals ───
+  const totalsX = pageWidth - margin - 70;
   const valX = pageWidth - margin;
 
-  const addTotalLine = (label: string, value: string, bold = false, color: [number, number, number] = darkColor) => {
+  const addTotalLine = (label: string, value: string, bold = false, color: [number, number, number] = DARK) => {
     doc.setFont("helvetica", bold ? "bold" : "normal");
-    doc.setFontSize(bold ? 11 : 9);
-    doc.setTextColor(...grayColor);
+    doc.setFontSize(bold ? 12 : 9);
+    doc.setTextColor(...GRAY);
     doc.text(label, totalsX, y);
     doc.setTextColor(...color);
     doc.text(value, valX, y, { align: "right" });
-    y += bold ? 7 : 5;
+    y += bold ? 8 : 5;
   };
 
-  addTotalLine("Subtotal", formatCurrency(Number(budget.subtotal)));
+  addTotalLine("Subtotal:", formatCurrency(Number(budget.subtotal)));
   if (Number(budget.total_discount) > 0) {
     addTotalLine(
-      `Desconto${budget.discount_type === "percent" ? ` (${budget.discount_value}%)` : ""}`,
+      `Desconto${budget.discount_type === "percent" ? ` (${budget.discount_value}%)` : ""}:`,
       `− ${formatCurrency(Number(budget.total_discount))}`,
       false,
       [200, 50, 50]
     );
   }
   if (Number(budget.freight) > 0) {
-    addTotalLine("Frete", `+ ${formatCurrency(Number(budget.freight))}`);
+    addTotalLine("Frete:", `+ ${formatCurrency(Number(budget.freight))}`);
   }
   if (Number(budget.other_costs) > 0) {
-    addTotalLine("Outros custos", `+ ${formatCurrency(Number(budget.other_costs))}`);
+    addTotalLine("Outros custos:", `+ ${formatCurrency(Number(budget.other_costs))}`);
   }
 
-  // Separator line
   doc.setDrawColor(200, 200, 200);
   doc.line(totalsX, y - 2, valX, y - 2);
   y += 2;
 
-  addTotalLine("TOTAL", formatCurrency(Number(budget.total)), true, primaryColor);
-
+  addTotalLine("TOTAL:", formatCurrency(Number(budget.total)), true, PRIMARY);
   y += 4;
 
-  // ─── Payment terms & notes ───
-  if (budget.payment_terms) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...darkColor);
-    doc.text("CONDIÇÕES DE PAGAMENTO", margin, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...grayColor);
-    const ptLines = doc.splitTextToSize(budget.payment_terms, contentWidth);
-    doc.text(ptLines, margin, y);
-    y += ptLines.length * 4 + 4;
-  }
-
+  // ─── Observations box ───
   if (budget.general_notes) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...darkColor);
-    doc.text("OBSERVAÇÕES", margin, y);
-    y += 5;
+    drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth);
+    y += 7;
+    const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth - 6);
+    const noteBoxH = Math.max(10, noteLines.length * 4 + 6);
+    drawSectionBox(doc, margin, y, contentWidth, noteBoxH, [200, 200, 200]);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...grayColor);
-    const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth);
-    doc.text(noteLines, margin, y);
-    y += noteLines.length * 4 + 4;
+    doc.setFontSize(8.5);
+    doc.setTextColor(...DARK);
+    doc.text(noteLines, margin + 3, y + 5);
+    y += noteBoxH + 4;
   }
 
-  // ─── Footer ───
-  const footerText = company?.doc_footer_text || "Orçamento válido por 15 dias. Valores sujeitos a alteração sem aviso prévio.";
-  const pageHeight = doc.internal.pageSize.getHeight();
-  doc.setFontSize(8);
-  doc.setTextColor(...grayColor);
-  doc.setFont("helvetica", "italic");
-  const footerLines = doc.splitTextToSize(footerText, contentWidth);
-  doc.text(footerLines, pageWidth / 2, pageHeight - 12, { align: "center" });
+  // ─── Footer with signatures ───
+  const footerY = pageHeight - 30;
 
-  // Page number
+  // Separator line
+  doc.setDrawColor(...PRIMARY);
+  doc.setLineWidth(0.5);
+  doc.line(margin, footerY, pageWidth - margin, footerY);
+
+  // Company name + CNPJ centered
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...DARK);
+  const footerName = company?.razao_social || company?.nome_fantasia || "";
+  const footerCnpj = company?.cnpj ? ` - CNPJ: ${company.cnpj}` : "";
+  doc.text(footerName + footerCnpj, pageWidth / 2, footerY + 5, { align: "center" });
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
-  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, pageWidth / 2, pageHeight - 6, { align: "center" });
+  doc.setTextColor(...GRAY);
+  const contactLine = [company?.phone, company?.email].filter(Boolean).join(" | ");
+  if (contactLine) {
+    doc.text(contactLine, pageWidth / 2, footerY + 9, { align: "center" });
+  }
+
+  // Signature lines
+  const sigY = footerY + 18;
+  const sigWidth = 60;
+
+  // Client signature
+  doc.setDrawColor(...DARK);
+  doc.setLineWidth(0.3);
+  doc.line(margin, sigY, margin + sigWidth, sigY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...GRAY);
+  doc.text("Assinatura Cliente", margin + sigWidth / 2, sigY + 4, { align: "center" });
+
+  // Company signature
+  doc.line(pageWidth - margin - sigWidth, sigY, pageWidth - margin, sigY);
+  doc.text("Assinatura Empresa", pageWidth - margin - sigWidth / 2, sigY + 4, { align: "center" });
 
   return doc;
 }
 
-export function downloadBudgetPdf(budget: BudgetWithItems, company?: DbCompanySettings | null) {
-  const doc = generateBudgetPdf(budget, company);
+export async function downloadBudgetPdf(budget: BudgetWithItems, company?: DbCompanySettings | null) {
+  const doc = await generateBudgetPdf(budget, company);
   doc.save(`${budget.number}.pdf`);
 }
