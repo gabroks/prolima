@@ -19,6 +19,7 @@ const CHARGE_UNITS = ["m²", "metro", "unidade", "kg", "litro", "peça"];
 const MEASURE_UNITS = ["centímetro", "metro", "milímetro", "unidade"];
 
 type SortKey = "name" | "price-asc" | "price-desc" | "category";
+const PAGE_SIZE = 15;
 
 const emptyForm: MaterialForm = { name: "", category: "", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 0 };
 
@@ -31,6 +32,7 @@ export default function Materials() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,6 +61,10 @@ export default function Materials() {
     return sorted;
   }, [materials, search, categoryFilter, sortBy]);
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
+  const resetPage = () => setPage(0);
+
   const avgPrice = materials.length > 0 ? materials.reduce((s, m) => s + m.base_price, 0) / materials.length : 0;
   const maxPrice = materials.length > 0 ? Math.max(...materials.map(m => m.base_price)) : 0;
 
@@ -76,18 +82,17 @@ export default function Materials() {
   const handleSave = () => {
     if (!form.name) { toast.error("Informe o nome do material"); return; }
     if (!form.basePrice || form.basePrice <= 0) { toast.error("Informe um preço base válido"); return; }
+    const onSuccess = () => { setDialogOpen(false); setForm(emptyForm); setEditingId(null); };
     if (editingId) {
-      updateMaterial.mutate({ id: editingId, form });
+      updateMaterial.mutate({ id: editingId, form }, { onSuccess });
     } else {
-      createMaterial.mutate(form);
+      createMaterial.mutate(form, { onSuccess });
     }
-    setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    deleteMaterial.mutate(deleteId);
-    setDeleteId(null);
+    deleteMaterial.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
 
   const updateField = (field: keyof MaterialForm, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
@@ -142,9 +147,9 @@ export default function Materials() {
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou categoria…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Buscar por nome ou categoria…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas categorias</SelectItem>
@@ -192,7 +197,7 @@ export default function Materials() {
                     )}
                   </TableCell>
                 </TableRow>
-              ) : filtered.map((m) => (
+              ) : paged.map((m) => (
                 <TableRow key={m.id} className="group">
                   <TableCell>
                     <div>
@@ -224,10 +229,19 @@ export default function Materials() {
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Exibindo {filtered.length} de {materials.length} materiais
-        {categoryFilter !== "all" && <> • Filtro: <span className="font-medium text-foreground">{categoryFilter}</span></>}
-      </p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-muted-foreground">
+          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} materiais
+          {categoryFilter !== "all" && <> • Filtro: <span className="font-medium text-foreground">{categoryFilter}</span></>}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+            <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
+          </div>
+        )}
+      </div>
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -292,7 +306,9 @@ export default function Materials() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteMaterial.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMaterial.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

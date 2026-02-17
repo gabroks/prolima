@@ -19,6 +19,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
 
 type SortKey = "name" | "city" | "status";
+const PAGE_SIZE = 15;
 
 const emptyForm: SupplierForm = { name: "", personType: "juridica", active: true };
 
@@ -33,6 +34,7 @@ export default function Suppliers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -53,6 +55,10 @@ export default function Suppliers() {
     }
     return result;
   }, [suppliers, search, statusFilter, sortBy]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
+  const resetPage = () => setPage(0);
 
   const activeCount = suppliers.filter(s => s.active).length;
 
@@ -78,18 +84,17 @@ export default function Suppliers() {
 
   const handleSave = () => {
     if (!form.name) { toast.error("Informe o nome do fornecedor"); return; }
+    const onSuccess = () => { setDialogOpen(false); setForm(emptyForm); setEditingId(null); };
     if (editingId) {
-      updateSupplier.mutate({ id: editingId, form });
+      updateSupplier.mutate({ id: editingId, form }, { onSuccess });
     } else {
-      createSupplier.mutate(form);
+      createSupplier.mutate(form, { onSuccess });
     }
-    setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    deleteSupplier.mutate(deleteId);
-    setDeleteId(null);
+    deleteSupplier.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
 
   const handleToggle = (s: DbSupplier) => {
@@ -146,9 +151,9 @@ export default function Suppliers() {
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, documento, telefone, cidade…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Buscar por nome, documento, telefone, cidade…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
           <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -196,7 +201,7 @@ export default function Suppliers() {
                     )}
                   </TableCell>
                 </TableRow>
-              ) : filtered.map((s) => (
+              ) : paged.map((s) => (
                 <TableRow key={s.id} className="group">
                   <TableCell>
                     <div>
@@ -264,10 +269,19 @@ export default function Suppliers() {
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Exibindo {filtered.length} de {suppliers.length} fornecedores
-        {statusFilter !== "all" && <> • Filtro: <span className="font-medium text-foreground">{statusFilter === "active" ? "Ativos" : "Inativos"}</span></>}
-      </p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-muted-foreground">
+          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} fornecedores
+          {statusFilter !== "all" && <> • Filtro: <span className="font-medium text-foreground">{statusFilter === "active" ? "Ativos" : "Inativos"}</span></>}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+            <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
+          </div>
+        )}
+      </div>
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -342,7 +356,9 @@ export default function Suppliers() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteSupplier.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteSupplier.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
