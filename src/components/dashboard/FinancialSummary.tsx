@@ -9,12 +9,15 @@ interface FinancialSummaryProps {
   totalReceitas: number;
   totalDespesas: number;
   totalApproved: number;
+  monthReceitas?: number;
+  monthDespesas?: number;
 }
 
-export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved }: FinancialSummaryProps) {
+export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, monthReceitas, monthDespesas }: FinancialSummaryProps) {
   const navigate = useNavigate();
   const saldo = totalReceitas - totalDespesas;
   const margem = totalReceitas > 0 ? Math.round(((totalReceitas - totalDespesas) / totalReceitas) * 100) : 0;
+  const monthSaldo = (monthReceitas ?? 0) - (monthDespesas ?? 0);
 
   return (
     <Card className="lg:col-span-1 animate-slide-up" style={{ animationDelay: "400ms", animationFillMode: "backwards" }}>
@@ -25,7 +28,33 @@ export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved }
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Month summary */}
+        {monthReceitas !== undefined && (
+          <>
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Este mês</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Receitas</span>
+                <span className="text-sm font-semibold text-primary tabular-nums">{formatCurrency(monthReceitas)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Despesas</span>
+                <span className="text-sm font-semibold text-destructive tabular-nums">{formatCurrency(monthDespesas ?? 0)}</span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t">
+                <span className="text-sm font-medium">Saldo mensal</span>
+                <span className={`text-sm font-bold tabular-nums ${monthSaldo >= 0 ? "text-primary" : "text-destructive"}`}>
+                  {formatCurrency(monthSaldo)}
+                </span>
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
+
+        {/* All-time totals */}
         <div className="space-y-3">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Acumulado</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-2.5 w-2.5 rounded-full bg-primary" />
