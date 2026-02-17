@@ -13,7 +13,7 @@ export function FinancialSummaryCards({ totalApproved, totalReceived, balance, p
   const cards = [
     { label: "Orç. Aprovados", value: formatCurrency(totalApproved), icon: DollarSign, color: "text-primary" },
     { label: "Total Recebido", value: formatCurrency(totalReceived), icon: TrendingUp, color: "text-primary" },
-    { label: "A Receber", value: formatCurrency(balance), icon: balance > 0 ? AlertCircle : CheckCircle2, color: balance > 0 ? "text-[hsl(var(--warning))]" : "text-primary" },
+    { label: "A Receber", value: formatCurrency(balance), icon: balance > 0 ? AlertCircle : CheckCircle2, color: balance > 0 ? "text-warning" : "text-primary" },
     { label: "Lucro Líquido", value: formatCurrency(profit), icon: profit >= 0 ? TrendingUp : TrendingDown, color: profit >= 0 ? "text-primary" : "text-destructive" },
   ];
 

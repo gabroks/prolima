@@ -22,8 +22,8 @@ function getPasswordStrength(pw: string): { label: string; value: number; color:
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   if (score <= 2) return { label: "Fraca", value: 25, color: "bg-destructive" };
-  if (score <= 3) return { label: "Média", value: 50, color: "bg-[hsl(var(--warning))]" };
-  if (score <= 4) return { label: "Boa", value: 75, color: "bg-[hsl(var(--info))]" };
+  if (score <= 3) return { label: "Média", value: 50, color: "bg-warning" };
+  if (score <= 4) return { label: "Boa", value: 75, color: "bg-info" };
   return { label: "Forte", value: 100, color: "bg-primary" };
 }
 
@@ -111,7 +111,7 @@ export default function Profile() {
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Força da senha</span>
-                  <span className={`text-xs font-medium ${strength.value <= 25 ? "text-destructive" : strength.value <= 50 ? "text-[hsl(var(--warning))]" : strength.value <= 75 ? "text-[hsl(var(--info))]" : "text-primary"}`}>{strength.label}</span>
+                  <span className={`text-xs font-medium ${strength.value <= 25 ? "text-destructive" : strength.value <= 50 ? "text-warning" : strength.value <= 75 ? "text-info" : "text-primary"}`}>{strength.label}</span>
                 </div>
                 <Progress value={strength.value} className={`h-1.5 [&>div]:${strength.color}`} />
               </div>

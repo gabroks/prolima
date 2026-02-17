@@ -62,7 +62,7 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
                     onClick={() => navigate("/orcamentos")}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <AlertCircle className="h-3.5 w-3.5 text-[hsl(var(--warning))] shrink-0" />
+                      <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" />
                       <span className="text-sm truncate">{b.number} — {b.client_name}</span>
                     </div>
                     <Badge variant={st.variant} className="text-[10px] h-5 shrink-0 ml-2">{st.label}</Badge>
