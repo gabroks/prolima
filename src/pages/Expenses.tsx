@@ -13,6 +13,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, type ExpenseForm, type DbExpense } from "@/hooks/useExpenses";
 import { Plus, Search, Pencil, Trash2, Receipt, ArrowUpDown } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { toast } from "sonner";
 import { ExpenseSummaryCards } from "@/components/expenses/ExpenseSummaryCards";
 import { ExpenseCharts } from "@/components/expenses/ExpenseCharts";
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
@@ -85,7 +86,8 @@ export default function Expenses() {
   };
 
   const handleSave = () => {
-    if (!form.description || !form.amount || form.amount <= 0) return;
+    if (!form.description) { toast.error("Informe a descrição da despesa"); return; }
+    if (!form.amount || form.amount <= 0) { toast.error("Informe um valor válido"); return; }
     const budget = budgets.find((b) => b.id === form.budgetId);
     const supplier = suppliers.find((s) => s.id === form.supplierId);
     const fullForm: ExpenseForm = { description: form.description!, amount: form.amount!, category: form.category || "Material", date: form.date || new Date().toISOString().split("T")[0], budgetId: form.budgetId, budgetNumber: budget?.number || form.budgetNumber, supplierId: form.supplierId, supplierName: supplier?.name || form.supplierName, notes: form.notes };
@@ -136,7 +138,7 @@ export default function Expenses() {
 
       <div className="flex justify-between text-xs text-muted-foreground"><span>Exibindo {filtered.length} de {expenses.length} despesas{categoryFilter !== "all" && <> • <span className="font-medium text-foreground">{categoryFilter}</span></>}</span><span className="font-semibold text-destructive tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span></div>
 
-      <ExpenseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} form={form} setForm={setForm} onSave={handleSave} editingId={editingId} budgets={budgets} suppliers={suppliers} />
+      <ExpenseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} form={form} setForm={setForm} onSave={handleSave} editingId={editingId} budgets={budgets} suppliers={suppliers} isSaving={createExpense.isPending || updateExpense.isPending} />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir despesa?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
