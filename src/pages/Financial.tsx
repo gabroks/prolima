@@ -1,32 +1,25 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBudgets } from "@/hooks/useBudgets";
 import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment, type PaymentForm, type DbPayment } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
-import {
-  DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Search, Pencil, Trash2,
-  CreditCard, ArrowUpDown, CheckCircle2, AlertCircle, PieChart, CalendarDays,
-} from "lucide-react";
+import { Plus, Search, Pencil, Trash2, CreditCard, ArrowUpDown, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import { FinancialSummaryCards } from "@/components/financial/FinancialSummaryCards";
+import { FinancialCharts } from "@/components/financial/FinancialCharts";
+import { PaymentFormDialog } from "@/components/financial/PaymentFormDialog";
 
 const PAYMENT_METHODS = ["PIX", "Dinheiro", "Cartão", "Boleto", "Transferência"];
-const METHOD_COLORS: Record<string, string> = { PIX: "hsl(var(--primary))", Dinheiro: "hsl(var(--chart-4))", Cartão: "hsl(var(--chart-3))", Boleto: "hsl(var(--chart-5))", Transferência: "hsl(var(--chart-2))" };
-
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
 export default function Financial() {
@@ -53,12 +46,39 @@ export default function Financial() {
   const profit = totalReceived - totalExpenses;
   const receivedPct = totalApproved > 0 ? Math.round((totalReceived / totalApproved) * 100) : 0;
 
-  const methodBreakdown = useMemo(() => { const map: Record<string, number> = {}; payments.forEach(p => { map[p.method] = (map[p.method] || 0) + Number(p.amount); }); return Object.entries(map).map(([name, value]) => ({ name, value })); }, [payments]);
-  const monthlyRevenue = useMemo(() => { const months: Record<string, number> = {}; payments.forEach(p => { const key = p.date.slice(0, 7); months[key] = (months[key] || 0) + Number(p.amount); }); const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]; return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([key, total]) => ({ month: monthNames[parseInt(key.split("-")[1]) - 1], total })); }, [payments]);
+  const methodBreakdown = useMemo(() => {
+    const map: Record<string, number> = {};
+    payments.forEach(p => { map[p.method] = (map[p.method] || 0) + Number(p.amount); });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [payments]);
 
-  const filteredPayments = useMemo(() => { const q = search.toLowerCase(); let result = payments.filter(p => { const matchSearch = !q || p.client_name.toLowerCase().includes(q) || p.budget_number.toLowerCase().includes(q); const matchMethod = methodFilter === "all" || p.method === methodFilter; return matchSearch && matchMethod; }); switch (sortBy) { case "date-desc": result.sort((a, b) => b.date.localeCompare(a.date)); break; case "date-asc": result.sort((a, b) => a.date.localeCompare(b.date)); break; case "amount-desc": result.sort((a, b) => Number(b.amount) - Number(a.amount)); break; case "amount-asc": result.sort((a, b) => Number(a.amount) - Number(b.amount)); break; } return result; }, [payments, search, methodFilter, sortBy]);
+  const monthlyRevenue = useMemo(() => {
+    const months: Record<string, number> = {};
+    payments.forEach(p => { const key = p.date.slice(0, 7); months[key] = (months[key] || 0) + Number(p.amount); });
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([key, total]) => ({ month: monthNames[parseInt(key.split("-")[1]) - 1], total }));
+  }, [payments]);
 
-  const filteredBudgets = useMemo(() => { const q = search.toLowerCase(); return approvedBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q)); }, [search, approvedBudgets]);
+  const filteredPayments = useMemo(() => {
+    const q = search.toLowerCase();
+    let result = payments.filter(p => {
+      const matchSearch = !q || p.client_name.toLowerCase().includes(q) || p.budget_number.toLowerCase().includes(q);
+      const matchMethod = methodFilter === "all" || p.method === methodFilter;
+      return matchSearch && matchMethod;
+    });
+    switch (sortBy) {
+      case "date-desc": result.sort((a, b) => b.date.localeCompare(a.date)); break;
+      case "date-asc": result.sort((a, b) => a.date.localeCompare(b.date)); break;
+      case "amount-desc": result.sort((a, b) => Number(b.amount) - Number(a.amount)); break;
+      case "amount-asc": result.sort((a, b) => Number(a.amount) - Number(b.amount)); break;
+    }
+    return result;
+  }, [payments, search, methodFilter, sortBy]);
+
+  const filteredBudgets = useMemo(() => {
+    const q = search.toLowerCase();
+    return approvedBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q));
+  }, [search, approvedBudgets]);
 
   const openNew = () => { setEditingId(null); setForm({ method: "PIX" }); setDialogOpen(true); };
   const openEdit = (p: DbPayment) => { setEditingId(p.id); setForm({ budgetId: p.budget_id || "", budgetNumber: p.budget_number, clientName: p.client_name, amount: Number(p.amount), method: p.method, date: p.date, notes: p.notes || undefined }); setDialogOpen(true); };
@@ -78,23 +98,13 @@ export default function Financial() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4"><div><h2 className="text-2xl font-bold">Financeiro</h2><p className="text-sm text-muted-foreground mt-0.5">Controle de pagamentos e receitas</p></div><Button onClick={openNew} className="shadow-md shadow-primary/20"><Plus className="h-4 w-4 mr-2" />Registrar Pagamento</Button></div>
-
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Orç. Aprovados", value: formatCurrency(totalApproved), icon: DollarSign, color: "text-primary" },
-          { label: "Total Recebido", value: formatCurrency(totalReceived), icon: TrendingUp, color: "text-primary" },
-          { label: "A Receber", value: formatCurrency(balance), icon: balance > 0 ? AlertCircle : CheckCircle2, color: balance > 0 ? "text-[hsl(var(--warning))]" : "text-primary" },
-          { label: "Lucro Líquido", value: formatCurrency(profit), icon: profit >= 0 ? TrendingUp : TrendingDown, color: profit >= 0 ? "text-primary" : "text-destructive" },
-        ].map(c => <Card key={c.label} className="p-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><c.icon className={`h-5 w-5 ${c.color}`} /></div><div className="min-w-0"><p className="text-xs text-muted-foreground">{c.label}</p><p className="text-lg font-bold tabular-nums truncate">{c.value}</p></div></div></Card>)}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div><h2 className="text-2xl font-bold">Financeiro</h2><p className="text-sm text-muted-foreground mt-0.5">Controle de pagamentos e receitas</p></div>
+        <Button onClick={openNew} className="shadow-md shadow-primary/20"><Plus className="h-4 w-4 mr-2" />Registrar Pagamento</Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 p-5"><div className="flex items-center justify-between mb-3"><div><p className="text-sm font-semibold">Progresso de Recebimento</p><p className="text-xs text-muted-foreground mt-0.5">{receivedPct}% do valor aprovado já foi recebido</p></div><span className="text-2xl font-bold tabular-nums text-primary">{receivedPct}%</span></div><Progress value={receivedPct} className="h-3 mb-4" /><div className="grid grid-cols-3 gap-4 text-center"><div><p className="text-xs text-muted-foreground">Aprovado</p><p className="text-sm font-semibold tabular-nums">{formatCurrency(totalApproved)}</p></div><div><p className="text-xs text-muted-foreground">Recebido</p><p className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(totalReceived)}</p></div><div><p className="text-xs text-muted-foreground">Pendente</p><p className="text-sm font-semibold tabular-nums text-[hsl(var(--warning))]">{formatCurrency(balance)}</p></div></div></Card>
-        <Card className="p-5"><p className="text-sm font-semibold flex items-center gap-2 mb-3"><PieChart className="h-4 w-4 text-muted-foreground" />Métodos de Pagamento</p>{methodBreakdown.length > 0 ? (<><ResponsiveContainer width="100%" height={120}><RechartsPie><Pie data={methodBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} innerRadius={25} strokeWidth={2}>{methodBreakdown.map((entry) => <Cell key={entry.name} fill={METHOD_COLORS[entry.name] || "hsl(var(--muted))"} />)}</Pie><Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }} /></RechartsPie></ResponsiveContainer><div className="space-y-1.5 mt-2">{methodBreakdown.map(m => <div key={m.name} className="flex items-center justify-between text-xs"><div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: METHOD_COLORS[m.name] }} /><span>{m.name}</span></div><span className="font-semibold tabular-nums">{formatCurrency(m.value)}</span></div>)}</div></>) : <p className="text-sm text-muted-foreground text-center py-6">Nenhum pagamento</p>}</Card>
-      </div>
-
-      {monthlyRevenue.length > 1 && <Card className="p-5"><p className="text-sm font-semibold flex items-center gap-2 mb-4"><CalendarDays className="h-4 w-4 text-muted-foreground" />Evolução Mensal de Receitas</p><ResponsiveContainer width="100%" height={180}><AreaChart data={monthlyRevenue}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} /><XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} /><Tooltip formatter={(v: number) => [formatCurrency(v), "Receitas"]} contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }} /><Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.1} strokeWidth={2} /></AreaChart></ResponsiveContainer></Card>}
+      <FinancialSummaryCards totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} profit={profit} />
+      <FinancialCharts totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} receivedPct={receivedPct} methodBreakdown={methodBreakdown} monthlyRevenue={monthlyRevenue} />
 
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por cliente ou número…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" /></div>
@@ -119,16 +129,7 @@ export default function Financial() {
         </TableBody></Table></CardContent></Card></TabsContent>
       </Tabs>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{editingId ? "Editar Pagamento" : "Registrar Pagamento"}</DialogTitle><DialogDescription>Preencha os dados do pagamento.</DialogDescription></DialogHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2"><Label>Orçamento *</Label><Select value={form.budgetId || ""} onValueChange={(v) => setForm({ ...form, budgetId: v })}><SelectTrigger><SelectValue placeholder="Selecione um orçamento" /></SelectTrigger><SelectContent>{approvedBudgets.map(b => <SelectItem key={b.id} value={b.id}>{b.number} — {b.client_name} ({formatCurrency(Number(b.total))})</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>Valor (R$) *</Label><Input type="number" step="0.01" min="0" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })} /></div>
-          <div><Label>Forma de Pagamento</Label><Select value={form.method || "PIX"} onValueChange={(v) => setForm({ ...form, method: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>Data</Label><Input type="date" value={form.date || ""} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-          <div className="sm:col-span-2"><Label>Observações</Label><Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-        </div>
-        <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button><Button onClick={handleSave}>{editingId ? "Atualizar" : "Salvar"}</Button></DialogFooter>
-      </DialogContent></Dialog>
+      <PaymentFormDialog open={dialogOpen} onOpenChange={setDialogOpen} form={form} setForm={setForm} onSave={handleSave} editingId={editingId} approvedBudgets={approvedBudgets} />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir pagamento?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
