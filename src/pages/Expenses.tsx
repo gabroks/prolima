@@ -9,13 +9,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { mockBudgets, mockPayments, mockSuppliers, mockExpenses } from "@/data/mock";
-import { Expense } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useBudgets } from "@/hooks/useBudgets";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { usePayments } from "@/hooks/usePayments";
+import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, type ExpenseForm, type DbExpense } from "@/hooks/useExpenses";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Search, Pencil, Trash2, Receipt,
   ArrowUpDown, Tag, BarChart3, CalendarDays,
 } from "lucide-react";
-import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from "recharts";
 
@@ -34,10 +36,17 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
-const emptyForm: Partial<Expense> = { category: "Material" };
+const emptyForm: Partial<ExpenseForm> = { category: "Material" };
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState<Expense[]>(mockExpenses);
+  const { data: expenses = [], isLoading } = useExpenses();
+  const { data: payments = [] } = usePayments();
+  const { data: budgets = [] } = useBudgets();
+  const { data: suppliers = [] } = useSuppliers();
+  const createExpense = useCreateExpense();
+  const updateExpense = useUpdateExpense();
+  const deleteExpenseMut = useDeleteExpense();
+
   const [search, setSearch] = useState("");
   const [budgetFilter, setBudgetFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -45,93 +54,90 @@ export default function Expenses() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Expense>>(emptyForm);
+  const [form, setForm] = useState<Partial<ExpenseForm>>(emptyForm);
 
-  const totalEntradas = mockPayments.reduce((s, p) => s + p.amount, 0);
-  const totalDespesas = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalEntradas = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const totalDespesas = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const saldo = totalEntradas - totalDespesas;
   const avgExpense = expenses.length > 0 ? totalDespesas / expenses.length : 0;
 
-  // Category breakdown for chart
   const categoryBreakdown = useMemo(() => {
     const map: Record<string, number> = {};
-    expenses.forEach(e => { map[e.category] = (map[e.category] || 0) + e.amount; });
-    return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    expenses.forEach(e => { map[e.category] = (map[e.category] || 0) + Number(e.amount); });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [expenses]);
 
-  // Monthly trend
   const monthlyTrend = useMemo(() => {
     const months: Record<string, number> = {};
     expenses.forEach(e => {
       const key = e.date.slice(0, 7);
-      months[key] = (months[key] || 0) + e.amount;
+      months[key] = (months[key] || 0) + Number(e.amount);
     });
     const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    return Object.entries(months)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, total]) => {
-        const m = parseInt(key.split("-")[1]) - 1;
-        return { month: monthNames[m], total };
-      });
+    return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([key, total]) => {
+      const m = parseInt(key.split("-")[1]) - 1;
+      return { month: monthNames[m], total };
+    });
   }, [expenses]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let result = expenses.filter((e) => {
-      const matchSearch = !q || e.description.toLowerCase().includes(q) || (e.supplierName?.toLowerCase().includes(q));
-      const matchBudget = budgetFilter === "all" || (budgetFilter === "none" ? !e.budgetId : e.budgetId === budgetFilter);
+      const matchSearch = !q || e.description.toLowerCase().includes(q) || (e.supplier_name?.toLowerCase().includes(q));
+      const matchBudget = budgetFilter === "all" || (budgetFilter === "none" ? !e.budget_id : e.budget_id === budgetFilter);
       const matchCategory = categoryFilter === "all" || e.category === categoryFilter;
       return matchSearch && matchBudget && matchCategory;
     });
-
     switch (sortBy) {
       case "date-desc": result.sort((a, b) => b.date.localeCompare(a.date)); break;
       case "date-asc": result.sort((a, b) => a.date.localeCompare(b.date)); break;
-      case "amount-desc": result.sort((a, b) => b.amount - a.amount); break;
-      case "amount-asc": result.sort((a, b) => a.amount - b.amount); break;
+      case "amount-desc": result.sort((a, b) => Number(b.amount) - Number(a.amount)); break;
+      case "amount-asc": result.sort((a, b) => Number(a.amount) - Number(b.amount)); break;
     }
     return result;
   }, [expenses, search, budgetFilter, categoryFilter, sortBy]);
 
-  const filteredTotal = filtered.reduce((s, e) => s + e.amount, 0);
+  const filteredTotal = filtered.reduce((s, e) => s + Number(e.amount), 0);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (e: Expense) => { setEditingId(e.id); setForm({ ...e }); setDialogOpen(true); };
+  const openEdit = (e: DbExpense) => {
+    setEditingId(e.id);
+    setForm({
+      budgetId: e.budget_id || undefined, budgetNumber: e.budget_number || undefined,
+      description: e.description, supplierId: e.supplier_id || undefined,
+      supplierName: e.supplier_name || undefined, category: e.category,
+      amount: Number(e.amount), date: e.date, notes: e.notes || undefined,
+    });
+    setDialogOpen(true);
+  };
 
   const handleSave = () => {
-    if (!form.description || !form.amount || form.amount <= 0) {
-      toast.error("Informe a descrição e o valor");
-      return;
-    }
-    const budget = mockBudgets.find((b) => b.id === form.budgetId);
-    const supplier = mockSuppliers.find((s) => s.id === form.supplierId);
+    if (!form.description || !form.amount || form.amount <= 0) return;
+    const budget = budgets.find((b) => b.id === form.budgetId);
+    const supplier = suppliers.find((s) => s.id === form.supplierId);
+    const fullForm: ExpenseForm = {
+      description: form.description!,
+      amount: form.amount!,
+      category: form.category || "Material",
+      date: form.date || new Date().toISOString().split("T")[0],
+      budgetId: form.budgetId,
+      budgetNumber: budget?.number || form.budgetNumber,
+      supplierId: form.supplierId,
+      supplierName: supplier?.name || form.supplierName,
+      notes: form.notes,
+    };
     if (editingId) {
-      setExpenses(prev => prev.map(e => e.id === editingId ? {
-        ...e, ...form,
-        budgetNumber: budget?.number || e.budgetNumber,
-        supplierName: supplier?.name || e.supplierName,
-      } as Expense : e));
-      toast.success("Despesa atualizada!");
+      updateExpense.mutate({ id: editingId, form: fullForm });
     } else {
-      const newExpense: Expense = {
-        id: Date.now().toString(), budgetId: form.budgetId, budgetNumber: budget?.number,
-        description: form.description!, supplierId: form.supplierId, supplierName: supplier?.name,
-        category: form.category || "Material", amount: form.amount!,
-        date: form.date || new Date().toISOString().split("T")[0], notes: form.notes,
-      };
-      setExpenses(prev => [...prev, newExpense]);
-      toast.success("Despesa registrada!");
+      createExpense.mutate(fullForm);
     }
     setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    setExpenses(prev => prev.filter(e => e.id !== deleteId));
+    deleteExpenseMut.mutate(deleteId);
     setDeleteId(null);
-    toast.success("Despesa removida!");
   };
 
   const categoryBadgeVariant = (cat: string) => {
@@ -142,6 +148,8 @@ export default function Expenses() {
       default: return "secondary" as const;
     }
   };
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6">
@@ -155,7 +163,6 @@ export default function Expenses() {
         </Button>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Total Entradas", value: formatCurrency(totalEntradas), icon: TrendingUp, color: "text-primary" },
@@ -177,12 +184,10 @@ export default function Expenses() {
         ))}
       </div>
 
-      {/* Category Breakdown Chart */}
       {categoryBreakdown.length > 0 && (
         <Card className="p-5">
           <p className="text-sm font-semibold flex items-center gap-2 mb-4">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            Despesas por Categoria
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />Despesas por Categoria
           </p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={categoryBreakdown} layout="vertical" barSize={20}>
@@ -200,12 +205,10 @@ export default function Expenses() {
         </Card>
       )}
 
-      {/* Monthly Trend */}
       {monthlyTrend.length > 1 && (
         <Card className="p-5">
           <p className="text-sm font-semibold flex items-center gap-2 mb-4">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            Evolução Mensal de Despesas
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />Evolução Mensal de Despesas
           </p>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={monthlyTrend}>
@@ -219,7 +222,6 @@ export default function Expenses() {
         </Card>
       )}
 
-      {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -237,13 +239,12 @@ export default function Expenses() {
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="none">Sem orçamento</SelectItem>
-            {mockBudgets.map((b) => <SelectItem key={b.id} value={b.id}>{b.number}</SelectItem>)}
+            {budgets.map((b) => <SelectItem key={b.id} value={b.id}>{b.number}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
           <SelectTrigger className="w-[160px]">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" /><SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="date-desc">Mais recente</SelectItem>
@@ -254,7 +255,6 @@ export default function Expenses() {
         </Select>
       </div>
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -296,10 +296,10 @@ export default function Expenses() {
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant={categoryBadgeVariant(e.category)}>{e.category}</Badge>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{e.supplierName || "—"}</TableCell>
-                  <TableCell className="hidden md:table-cell font-mono text-xs">{e.budgetNumber || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell">{e.supplier_name || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell font-mono text-xs">{e.budget_number || "—"}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">{formatDate(e.date)}</TableCell>
-                  <TableCell className="tabular-nums font-semibold text-destructive">{formatCurrency(e.amount)}</TableCell>
+                  <TableCell className="tabular-nums font-semibold text-destructive">{formatCurrency(Number(e.amount))}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(e)}>
@@ -318,14 +318,10 @@ export default function Expenses() {
       </Card>
 
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>
-          Exibindo {filtered.length} de {expenses.length} despesas
-          {categoryFilter !== "all" && <> • <span className="font-medium text-foreground">{categoryFilter}</span></>}
-        </span>
+        <span>Exibindo {filtered.length} de {expenses.length} despesas{categoryFilter !== "all" && <> • <span className="font-medium text-foreground">{categoryFilter}</span></>}</span>
         <span className="font-semibold text-destructive tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span>
       </div>
 
-      {/* Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -341,9 +337,7 @@ export default function Expenses() {
               <Label>Categoria</Label>
               <Select value={form.category || "Material"} onValueChange={(v) => setForm({ ...form, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
@@ -356,7 +350,7 @@ export default function Expenses() {
                 <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
-                  {mockBudgets.map((b) => <SelectItem key={b.id} value={b.id}>{b.number} — {b.clientName}</SelectItem>)}
+                  {budgets.map((b) => <SelectItem key={b.id} value={b.id}>{b.number} — {b.client_name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -366,7 +360,7 @@ export default function Expenses() {
                 <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
-                  {mockSuppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

@@ -9,13 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockCompanySettings } from "@/data/mock";
-import { CompanySettings } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCompanySettings, useUpdateCompanySettings } from "@/hooks/useCompanySettings";
 import {
   Upload, Building2, Palette, QrCode, Save, Check,
   FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
 } from "lucide-react";
-import { toast } from "sonner";
 
 const colorOptions = [
   { name: "Verde", value: "green", hsl: "152 58% 36%" },
@@ -31,31 +30,68 @@ const colorOptions = [
 const STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<CompanySettings>(mockCompanySettings);
+  const { data: dbSettings, isLoading } = useCompanySettings();
+  const updateSettings = useUpdateCompanySettings();
+
+  const [localSettings, setLocalSettings] = useState<Record<string, string> | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Notification prefs
+  // Notification prefs (local only for now)
   const [notifBudgetApproved, setNotifBudgetApproved] = useState(true);
   const [notifPaymentReceived, setNotifPaymentReceived] = useState(true);
   const [notifBudgetExpiring, setNotifBudgetExpiring] = useState(true);
   const [notifWeeklyReport, setNotifWeeklyReport] = useState(false);
 
-  // Document prefs
+  // Document prefs (local only for now)
   const [docShowLogo, setDocShowLogo] = useState(true);
   const [docShowPhone, setDocShowPhone] = useState(true);
   const [docShowAddress, setDocShowAddress] = useState(true);
   const [docFooterText, setDocFooterText] = useState("Orçamento válido por 15 dias. Valores sujeitos a alteração sem aviso prévio.");
   const [docValidityDays, setDocValidityDays] = useState("15");
 
-  const update = (field: keyof CompanySettings, value: string) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+  const settings = localSettings || (dbSettings ? {
+    razaoSocial: dbSettings.razao_social,
+    nomeFantasia: dbSettings.nome_fantasia,
+    phone: dbSettings.phone,
+    email: dbSettings.email,
+    cnpj: dbSettings.cnpj,
+    inscricaoEstadual: dbSettings.inscricao_estadual,
+    street: dbSettings.street,
+    neighborhood: dbSettings.neighborhood,
+    city: dbSettings.city,
+    state: dbSettings.state,
+    cep: dbSettings.cep,
+    themeColor: dbSettings.theme_color,
+  } : null);
+
+  const update = (field: string, value: string) => {
+    setLocalSettings(prev => ({ ...(prev || settings || {}), [field]: value }));
     setHasChanges(true);
   };
 
   const handleSave = () => {
+    if (!dbSettings || !settings) return;
+    updateSettings.mutate({
+      id: dbSettings.id,
+      data: {
+        razao_social: settings.razaoSocial,
+        nome_fantasia: settings.nomeFantasia,
+        phone: settings.phone,
+        email: settings.email,
+        cnpj: settings.cnpj,
+        inscricao_estadual: settings.inscricaoEstadual,
+        street: settings.street,
+        neighborhood: settings.neighborhood,
+        city: settings.city,
+        state: settings.state,
+        cep: settings.cep,
+        theme_color: settings.themeColor,
+      },
+    });
     setHasChanges(false);
-    toast.success("Configurações salvas com sucesso!");
   };
+
+  if (isLoading || !settings) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-96" /></div>;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -72,97 +108,44 @@ export default function SettingsPage() {
 
       <Tabs defaultValue="empresa" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="empresa" className="text-xs sm:text-sm">
-            <Building2 className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Empresa
-          </TabsTrigger>
-          <TabsTrigger value="documentos" className="text-xs sm:text-sm">
-            <FileText className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Documentos
-          </TabsTrigger>
-          <TabsTrigger value="visual" className="text-xs sm:text-sm">
-            <Palette className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Visual
-          </TabsTrigger>
-          <TabsTrigger value="notificacoes" className="text-xs sm:text-sm">
-            <Bell className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Alertas
-          </TabsTrigger>
+          <TabsTrigger value="empresa" className="text-xs sm:text-sm"><Building2 className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Empresa</TabsTrigger>
+          <TabsTrigger value="documentos" className="text-xs sm:text-sm"><FileText className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Documentos</TabsTrigger>
+          <TabsTrigger value="visual" className="text-xs sm:text-sm"><Palette className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Visual</TabsTrigger>
+          <TabsTrigger value="notificacoes" className="text-xs sm:text-sm"><Bell className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Alertas</TabsTrigger>
         </TabsList>
 
-        {/* EMPRESA */}
         <TabsContent value="empresa" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" />Dados da Empresa
-              </CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" />Dados da Empresa</CardTitle>
               <CardDescription>Informações que aparecem nos orçamentos e documentos emitidos.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Razão Social *</Label>
-                <Input value={settings.razaoSocial} onChange={(e) => update("razaoSocial", e.target.value)} />
-              </div>
-              <div>
-                <Label>Nome Fantasia *</Label>
-                <Input value={settings.nomeFantasia} onChange={(e) => update("nomeFantasia", e.target.value)} />
-              </div>
-              <div>
-                <Label>CNPJ</Label>
-                <Input value={settings.cnpj} onChange={(e) => update("cnpj", e.target.value)} placeholder="00.000.000/0001-00" />
-              </div>
-              <div>
-                <Label>Inscrição Estadual</Label>
-                <Input value={settings.inscricaoEstadual} onChange={(e) => update("inscricaoEstadual", e.target.value)} />
-              </div>
-              <div>
-                <Label className="flex items-center gap-1.5"><Phone className="h-3 w-3" />Telefone</Label>
-                <Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(00) 0000-0000" />
-              </div>
-              <div>
-                <Label className="flex items-center gap-1.5"><Mail className="h-3 w-3" />E-mail</Label>
-                <Input value={settings.email} onChange={(e) => update("email", e.target.value)} placeholder="contato@empresa.com" />
-              </div>
+              <div><Label>Razão Social *</Label><Input value={settings.razaoSocial} onChange={(e) => update("razaoSocial", e.target.value)} /></div>
+              <div><Label>Nome Fantasia *</Label><Input value={settings.nomeFantasia} onChange={(e) => update("nomeFantasia", e.target.value)} /></div>
+              <div><Label>CNPJ</Label><Input value={settings.cnpj} onChange={(e) => update("cnpj", e.target.value)} placeholder="00.000.000/0001-00" /></div>
+              <div><Label>Inscrição Estadual</Label><Input value={settings.inscricaoEstadual} onChange={(e) => update("inscricaoEstadual", e.target.value)} /></div>
+              <div><Label className="flex items-center gap-1.5"><Phone className="h-3 w-3" />Telefone</Label><Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(00) 0000-0000" /></div>
+              <div><Label className="flex items-center gap-1.5"><Mail className="h-3 w-3" />E-mail</Label><Input value={settings.email} onChange={(e) => update("email", e.target.value)} placeholder="contato@empresa.com" /></div>
             </CardContent>
           </Card>
-
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />Endereço
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />Endereço</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label>Rua / Logradouro</Label>
-                <Input value={settings.street} onChange={(e) => update("street", e.target.value)} placeholder="Rua, número, complemento" />
-              </div>
-              <div>
-                <Label>Bairro</Label>
-                <Input value={settings.neighborhood} onChange={(e) => update("neighborhood", e.target.value)} />
-              </div>
-              <div>
-                <Label>Cidade</Label>
-                <Input value={settings.city} onChange={(e) => update("city", e.target.value)} />
-              </div>
-              <div>
-                <Label>Estado</Label>
+              <div className="sm:col-span-2"><Label>Rua / Logradouro</Label><Input value={settings.street} onChange={(e) => update("street", e.target.value)} placeholder="Rua, número, complemento" /></div>
+              <div><Label>Bairro</Label><Input value={settings.neighborhood} onChange={(e) => update("neighborhood", e.target.value)} /></div>
+              <div><Label>Cidade</Label><Input value={settings.city} onChange={(e) => update("city", e.target.value)} /></div>
+              <div><Label>Estado</Label>
                 <Select value={settings.state} onValueChange={(v) => update("state", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>CEP</Label>
-                <Input value={settings.cep} onChange={(e) => update("cep", e.target.value)} placeholder="00000-000" />
-              </div>
+              <div><Label>CEP</Label><Input value={settings.cep} onChange={(e) => update("cep", e.target.value)} placeholder="00000-000" /></div>
             </CardContent>
           </Card>
-
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Logo da Empresa</CardTitle>
-              <CardDescription>Será exibida no cabeçalho dos orçamentos e documentos.</CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Logo da Empresa</CardTitle><CardDescription>Será exibida no cabeçalho dos orçamentos e documentos.</CardDescription></CardHeader>
             <CardContent>
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
@@ -173,25 +156,17 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* DOCUMENTOS */}
         <TabsContent value="documentos" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Printer className="h-4 w-4 text-primary" />Configurações de Orçamento
-              </CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Printer className="h-4 w-4 text-primary" />Configurações de Orçamento</CardTitle>
               <CardDescription>Defina o que aparece nos orçamentos gerados.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label>Validade padrão (dias)</Label>
-                  <Input type="number" min="1" max="90" value={docValidityDays} onChange={(e) => { setDocValidityDays(e.target.value); setHasChanges(true); }} />
-                </div>
+                <div><Label>Validade padrão (dias)</Label><Input type="number" min="1" max="90" value={docValidityDays} onChange={(e) => { setDocValidityDays(e.target.value); setHasChanges(true); }} /></div>
               </div>
-
               <Separator />
-
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold">Exibir no cabeçalho</h4>
                 {[
@@ -200,43 +175,26 @@ export default function SettingsPage() {
                   { label: "Endereço completo", desc: "Mostra o endereço no cabeçalho", checked: docShowAddress, onChange: setDocShowAddress },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.desc}</p>
-                    </div>
+                    <div><p className="text-sm font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
                     <Switch checked={item.checked} onCheckedChange={(v) => { item.onChange(v); setHasChanges(true); }} />
                   </div>
                 ))}
               </div>
-
               <Separator />
-
               <div>
                 <Label>Texto do rodapé</Label>
-                <Textarea
-                  value={docFooterText}
-                  onChange={(e) => { setDocFooterText(e.target.value); setHasChanges(true); }}
-                  rows={3}
-                  placeholder="Texto exibido no rodapé dos orçamentos…"
-                />
+                <Textarea value={docFooterText} onChange={(e) => { setDocFooterText(e.target.value); setHasChanges(true); }} rows={3} placeholder="Texto exibido no rodapé dos orçamentos…" />
                 <p className="text-xs text-muted-foreground mt-1">Este texto aparece ao final de cada orçamento emitido.</p>
               </div>
             </CardContent>
           </Card>
-
-          {/* Preview Header */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Prévia do Cabeçalho</CardTitle>
-              <CardDescription>Como ficará o topo dos seus orçamentos.</CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Prévia do Cabeçalho</CardTitle><CardDescription>Como ficará o topo dos seus orçamentos.</CardDescription></CardHeader>
             <CardContent>
               <div className="border rounded-lg p-5 bg-background space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    {docShowLogo && (
-                      <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>
-                    )}
+                    {docShowLogo && <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>}
                     <p className="font-bold text-sm">{settings.nomeFantasia || settings.razaoSocial}</p>
                     <p className="text-[11px] text-muted-foreground">{settings.razaoSocial}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">{settings.cnpj}</p>
@@ -244,9 +202,7 @@ export default function SettingsPage() {
                   <div className="text-right text-[11px] text-muted-foreground space-y-0.5">
                     {docShowPhone && <p>{settings.phone}</p>}
                     <p>{settings.email}</p>
-                    {docShowAddress && (
-                      <p>{settings.street}, {settings.neighborhood}<br />{settings.city} - {settings.state}, {settings.cep}</p>
-                    )}
+                    {docShowAddress && <p>{settings.street}, {settings.neighborhood}<br />{settings.city} - {settings.state}, {settings.cep}</p>}
                   </div>
                 </div>
                 <Separator />
@@ -257,12 +213,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <QrCode className="h-4 w-4 text-primary" />QR Code PIX
-              </CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><QrCode className="h-4 w-4 text-primary" />QR Code PIX</CardTitle>
               <CardDescription>QR code exibido nos orçamentos para pagamento via PIX.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -275,50 +228,29 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* VISUAL */}
         <TabsContent value="visual" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Palette className="h-4 w-4 text-primary" />Cor Principal
-              </CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Palette className="h-4 w-4 text-primary" />Cor Principal</CardTitle>
               <CardDescription>Cor usada nos documentos e detalhes do sistema.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
                 {colorOptions.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => update("themeColor", color.value)}
-                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border-2 transition-all ${
-                      settings.themeColor === color.value
-                        ? "border-foreground shadow-md scale-105"
-                        : "border-transparent hover:border-border"
-                    }`}
-                  >
+                  <button key={color.value} onClick={() => update("themeColor", color.value)}
+                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border-2 transition-all ${settings.themeColor === color.value ? "border-foreground shadow-md scale-105" : "border-transparent hover:border-border"}`}>
                     <div className="w-9 h-9 rounded-full shadow-sm relative" style={{ backgroundColor: `hsl(${color.hsl})` }}>
-                      {settings.themeColor === color.value && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Check className="h-4 w-4 text-white drop-shadow" />
-                        </div>
-                      )}
+                      {settings.themeColor === color.value && <div className="absolute inset-0 flex items-center justify-center"><Check className="h-4 w-4 text-white drop-shadow" /></div>}
                     </div>
                     <span className="text-[10px] font-medium">{color.name}</span>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                A cor selecionada será aplicada nos documentos gerados (orçamentos, relatórios).
-                O tema do sistema pode ser alternado entre claro/escuro na sidebar.
-              </p>
+              <p className="text-xs text-muted-foreground mt-4">A cor selecionada será aplicada nos documentos gerados (orçamentos, relatórios). O tema do sistema pode ser alternado entre claro/escuro na sidebar.</p>
             </CardContent>
           </Card>
-
-          {/* Color Preview */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Prévia da Cor</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Prévia da Cor</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-3">
                 {["Botão primário", "Badge status", "Cabeçalho doc"].map((label, i) => {
@@ -326,19 +258,9 @@ export default function SettingsPage() {
                   const hsl = selectedColor?.hsl || "152 58% 36%";
                   return (
                     <div key={label} className="rounded-lg border p-4 flex flex-col items-center gap-2">
-                      {i === 0 && (
-                        <div className="px-4 py-2 rounded-md text-white text-xs font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>
-                          Emitir Orçamento
-                        </div>
-                      )}
-                      {i === 1 && (
-                        <div className="px-2.5 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>
-                          Aprovado
-                        </div>
-                      )}
-                      {i === 2 && (
-                        <div className="w-full h-2 rounded-full" style={{ backgroundColor: `hsl(${hsl})` }} />
-                      )}
+                      {i === 0 && <div className="px-4 py-2 rounded-md text-white text-xs font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>Emitir Orçamento</div>}
+                      {i === 1 && <div className="px-2.5 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>Aprovado</div>}
+                      {i === 2 && <div className="w-full h-2 rounded-full" style={{ backgroundColor: `hsl(${hsl})` }} />}
                       <span className="text-[10px] text-muted-foreground">{label}</span>
                     </div>
                   );
@@ -348,13 +270,10 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* NOTIFICAÇÕES */}
         <TabsContent value="notificacoes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Bell className="h-4 w-4 text-primary" />Preferências de Notificação
-              </CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4 text-primary" />Preferências de Notificação</CardTitle>
               <CardDescription>Escolha quais alertas deseja receber.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -366,13 +285,8 @@ export default function SettingsPage() {
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <item.icon className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.desc}</p>
-                    </div>
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center"><item.icon className="h-4 w-4 text-primary" /></div>
+                    <div><p className="text-sm font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
                   </div>
                   <Switch checked={item.checked} onCheckedChange={(v) => { item.onChange(v); setHasChanges(true); }} />
                 </div>

@@ -1,34 +1,23 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Bell, Check, CheckCheck, Trash2, FileText, DollarSign,
   Users, AlertTriangle, Filter, Inbox,
 } from "lucide-react";
-import { Notification } from "@/types";
-import { toast } from "sonner";
+import {
+  useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead,
+  useDeleteNotification, useClearAllNotifications, type DbNotification,
+} from "@/hooks/useNotifications";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
 type NotifCategory = "all" | "budgets" | "payments" | "clients" | "alerts";
-
-interface ExtendedNotification extends Notification {
-  category: NotifCategory;
-}
-
-const mockNotifications: ExtendedNotification[] = [
-  { id: "1", message: "Orçamento ORC-001 foi aprovado pelo cliente João Silva", read: false, createdAt: "2025-02-15T10:30:00", category: "budgets" },
-  { id: "2", message: "Novo pagamento de R$ 647,00 registrado para ORC-001", read: false, createdAt: "2025-02-14T15:45:00", category: "payments" },
-  { id: "3", message: "O orçamento ORC-002 está próximo da validade (20/03/2025)", read: false, createdAt: "2025-02-13T09:00:00", category: "alerts" },
-  { id: "4", message: "Cliente Maria Oliveira foi marcado como inativo", read: true, createdAt: "2025-02-12T14:20:00", category: "clients" },
-  { id: "5", message: "Despesa de R$ 2.500,00 registrada: Aluguel do galpão", read: true, createdAt: "2025-02-01T08:00:00", category: "payments" },
-  { id: "6", message: "Pagamento de R$ 6.880,00 recebido — Construtora ABC (ORC-002)", read: false, createdAt: "2025-03-10T11:00:00", category: "payments" },
-  { id: "7", message: "Orçamento ORC-003 emitido para Maria Oliveira", read: true, createdAt: "2025-02-14T16:00:00", category: "budgets" },
-  { id: "8", message: "Novo cliente cadastrado: Construtora ABC Ltda", read: true, createdAt: "2025-02-01T09:00:00", category: "clients" },
-];
 
 const categoryConfig: Record<NotifCategory, { label: string; icon: React.ElementType; color: string }> = {
   all: { label: "Todas", icon: Inbox, color: "text-foreground" },
@@ -38,8 +27,14 @@ const categoryConfig: Record<NotifCategory, { label: string; icon: React.Element
   alerts: { label: "Alertas", icon: AlertTriangle, color: "text-[hsl(var(--warning))]" },
 };
 
-const getIcon = (cat: NotifCategory) => categoryConfig[cat]?.icon || Bell;
-const getColor = (cat: NotifCategory) => categoryConfig[cat]?.color || "text-muted-foreground";
+function guessCategory(message: string): NotifCategory {
+  const lower = message.toLowerCase();
+  if (lower.includes("orçamento") || lower.includes("orc-")) return "budgets";
+  if (lower.includes("pagamento") || lower.includes("despesa") || lower.includes("r$")) return "payments";
+  if (lower.includes("cliente")) return "clients";
+  if (lower.includes("alerta") || lower.includes("validade") || lower.includes("próximo")) return "alerts";
+  return "all";
+}
 
 const timeAgo = (date: string) => {
   const diff = Date.now() - new Date(date).getTime();
@@ -54,84 +49,70 @@ const timeAgo = (date: string) => {
 };
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState<ExtendedNotification[]>(mockNotifications);
+  const { data: notifications = [], isLoading } = useNotifications();
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
+  const deleteNotif = useDeleteNotification();
+  const clearAll = useClearAllNotifications();
+
   const [tab, setTab] = useState<"all" | "unread">("all");
   const [category, setCategory] = useState<NotifCategory>("all");
 
+  const enriched = useMemo(() =>
+    notifications.map(n => ({ ...n, category: guessCategory(n.message) })),
+    [notifications]
+  );
+
   const filtered = useMemo(() => {
-    let items = notifications;
+    let items = enriched;
     if (tab === "unread") items = items.filter(n => !n.read);
     if (category !== "all") items = items.filter(n => n.category === category);
-    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [notifications, tab, category]);
+    return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [enriched, tab, category]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast.success("Todas marcadas como lidas");
-  };
-
-  const remove = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    toast.success("Notificação removida");
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-    toast.success("Todas as notificações removidas");
-  };
-
-  // Category counts
   const catCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     (Object.keys(categoryConfig) as NotifCategory[]).forEach(k => {
-      counts[k] = k === "all" ? notifications.filter(n => !n.read).length : notifications.filter(n => n.category === k && !n.read).length;
+      counts[k] = k === "all" ? unreadCount : enriched.filter(n => n.category === k && !n.read).length;
     });
     return counts;
-  }, [notifications]);
+  }, [enriched, unreadCount]);
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold">Notificações</h2>
-          {unreadCount > 0 && (
-            <Badge className="tabular-nums">{unreadCount} {unreadCount === 1 ? "nova" : "novas"}</Badge>
-          )}
+          {unreadCount > 0 && <Badge className="tabular-nums">{unreadCount} {unreadCount === 1 ? "nova" : "novas"}</Badge>}
         </div>
         <div className="flex gap-2">
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={markAllAsRead}>
+            <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()}>
               <CheckCheck className="h-4 w-4 mr-1.5" />Marcar lidas
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={clearAll}>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => clearAll.mutate()}>
               <Trash2 className="h-4 w-4 mr-1.5" />Limpar
             </Button>
           )}
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList className="h-9">
             <TabsTrigger value="all" className="text-xs px-3">Todas</TabsTrigger>
-            <TabsTrigger value="unread" className="text-xs px-3">
-              Não lidas {unreadCount > 0 && `(${unreadCount})`}
-            </TabsTrigger>
+            <TabsTrigger value="unread" className="text-xs px-3">Não lidas {unreadCount > 0 && `(${unreadCount})`}</TabsTrigger>
           </TabsList>
         </Tabs>
-
         <Select value={category} onValueChange={(v) => setCategory(v as NotifCategory)}>
           <SelectTrigger className="w-[160px] h-9 text-xs">
-            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-            <SelectValue />
+            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /><SelectValue />
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(categoryConfig) as NotifCategory[]).map(k => {
@@ -150,7 +131,6 @@ export default function Notifications() {
         </Select>
       </div>
 
-      {/* List */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Bell className="h-12 w-12 mb-4 opacity-20" />
@@ -160,8 +140,9 @@ export default function Notifications() {
       ) : (
         <div className="space-y-2">
           {filtered.map(n => {
-            const Icon = getIcon(n.category);
-            const color = getColor(n.category);
+            const cat = n.category as NotifCategory;
+            const Icon = categoryConfig[cat]?.icon || Bell;
+            const color = categoryConfig[cat]?.color || "text-muted-foreground";
             return (
               <Card
                 key={n.id}
@@ -175,18 +156,18 @@ export default function Notifications() {
                     <p className={`text-sm leading-relaxed ${!n.read ? "font-medium" : "text-muted-foreground"}`}>{n.message}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-normal">
-                        {categoryConfig[n.category]?.label}
+                        {categoryConfig[cat]?.label || "Geral"}
                       </Badge>
-                      <span className="text-[10px] text-muted-foreground tabular-nums">{timeAgo(n.createdAt)}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{timeAgo(n.created_at)}</span>
                     </div>
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     {!n.read && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => markAsRead(n.id)} title="Marcar como lida">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => markRead.mutate(n.id)} title="Marcar como lida">
                         <Check className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => remove(n.id)} title="Remover">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteNotif.mutate(n.id)} title="Remover">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>

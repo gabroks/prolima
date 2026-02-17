@@ -10,25 +10,31 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { mockSuppliers, mockExpenses } from "@/data/mock";
-import { Supplier } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, useToggleSupplierActive, type SupplierForm, type DbSupplier } from "@/hooks/useSuppliers";
+import { useExpenses } from "@/hooks/useExpenses";
 import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign } from "lucide-react";
-import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
 
 type SortKey = "name" | "city" | "status";
 
-const emptyForm: Partial<Supplier> = { personType: "juridica", active: true };
+const emptyForm: SupplierForm = { name: "", personType: "juridica", active: true };
 
 export default function Suppliers() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
+  const { data: suppliers = [], isLoading } = useSuppliers();
+  const { data: expenses = [] } = useExpenses();
+  const createSupplier = useCreateSupplier();
+  const updateSupplier = useUpdateSupplier();
+  const deleteSupplier = useDeleteSupplier();
+  const toggleActive = useToggleSupplierActive();
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Supplier>>(emptyForm);
+  const [form, setForm] = useState<SupplierForm>(emptyForm);
 
   const filtered = useMemo(() => {
     let result = suppliers.filter((s) => {
@@ -47,51 +53,58 @@ export default function Suppliers() {
   }, [suppliers, search, statusFilter, sortBy]);
 
   const activeCount = suppliers.filter(s => s.active).length;
-  const cities = useMemo(() => [...new Set(suppliers.map(s => s.city).filter(Boolean))], [suppliers]);
 
-  // Expense totals per supplier
   const supplierExpenses = useMemo(() => {
     const map: Record<string, number> = {};
-    mockExpenses.forEach(e => { if (e.supplierId) map[e.supplierId] = (map[e.supplierId] || 0) + e.amount; });
+    expenses.forEach(e => { if (e.supplier_id) map[e.supplier_id] = (map[e.supplier_id] || 0) + Number(e.amount); });
     return map;
-  }, []);
+  }, [expenses]);
   const totalSupplierExpenses = Object.values(supplierExpenses).reduce((s, v) => s + v, 0);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (s: Supplier) => { setEditingId(s.id); setForm({ ...s }); setDialogOpen(true); };
+  const openEdit = (s: DbSupplier) => {
+    setEditingId(s.id);
+    setForm({
+      name: s.name, personType: s.person_type as "fisica" | "juridica",
+      document: s.document || undefined, phone: s.phone || undefined,
+      email: s.email || undefined, address: s.address || undefined,
+      neighborhood: s.neighborhood || undefined, city: s.city || undefined,
+      notes: s.notes || undefined, active: s.active,
+    });
+    setDialogOpen(true);
+  };
 
   const handleSave = () => {
-    if (!form.name) { toast.error("Informe o nome do fornecedor"); return; }
+    if (!form.name) return;
     if (editingId) {
-      setSuppliers(prev => prev.map(s => s.id === editingId ? { ...s, ...form } as Supplier : s));
-      toast.success("Fornecedor atualizado!");
+      updateSupplier.mutate({ id: editingId, form });
     } else {
-      const newSupplier: Supplier = {
-        id: Date.now().toString(), name: form.name!, personType: form.personType || "juridica",
-        document: form.document, phone: form.phone, email: form.email,
-        address: form.address, neighborhood: form.neighborhood, city: form.city,
-        notes: form.notes, active: form.active ?? true,
-      };
-      setSuppliers(prev => [...prev, newSupplier]);
-      toast.success("Fornecedor cadastrado!");
+      createSupplier.mutate(form);
     }
     setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    setSuppliers(prev => prev.filter(s => s.id !== deleteId));
+    deleteSupplier.mutate(deleteId);
     setDeleteId(null);
-    toast.success("Fornecedor removido!");
   };
 
-  const toggleActive = (id: string) => {
-    setSuppliers(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
-    const supplier = suppliers.find(s => s.id === id);
-    toast.success(`${supplier?.name} ${supplier?.active ? "desativado" : "ativado"}`);
+  const handleToggle = (s: DbSupplier) => {
+    toggleActive.mutate({ id: s.id, currentActive: s.active });
   };
 
-  const updateField = (field: keyof Supplier, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -187,7 +200,6 @@ export default function Suppliers() {
                     <div>
                       <p className="font-medium">{s.name}</p>
                       <p className="text-xs text-muted-foreground font-mono">{s.document || "—"}</p>
-                      {/* Mobile contact info */}
                       <div className="flex flex-wrap gap-2 mt-1 md:hidden">
                         {s.phone && (
                           <a href={`tel:${s.phone}`} className="text-xs text-primary flex items-center gap-1 hover:underline" onClick={e => e.stopPropagation()}>
@@ -228,7 +240,7 @@ export default function Suppliers() {
                     <Badge
                       variant={s.active ? "default" : "secondary"}
                       className="cursor-pointer select-none"
-                      onClick={() => toggleActive(s.id)}
+                      onClick={() => handleToggle(s)}
                     >
                       {s.active ? "Ativo" : "Inativo"}
                     </Badge>
@@ -265,7 +277,7 @@ export default function Suppliers() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <Label>Nome *</Label>
-              <Input value={form.name || ""} onChange={(e) => updateField("name", e.target.value)} placeholder="Nome do fornecedor" />
+              <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome do fornecedor" />
             </div>
             <div>
               <Label>Tipo de Pessoa</Label>
@@ -279,27 +291,27 @@ export default function Suppliers() {
             </div>
             <div>
               <Label>{form.personType === "juridica" ? "CNPJ" : "CPF"}</Label>
-              <Input value={form.document || ""} onChange={(e) => updateField("document", e.target.value)} placeholder={form.personType === "juridica" ? "00.000.000/0001-00" : "000.000.000-00"} />
+              <Input value={form.document || ""} onChange={(e) => setForm({ ...form, document: e.target.value })} placeholder={form.personType === "juridica" ? "00.000.000/0001-00" : "000.000.000-00"} />
             </div>
             <div>
               <Label>Telefone</Label>
-              <Input value={form.phone || ""} onChange={(e) => updateField("phone", e.target.value)} placeholder="(11) 99999-0000" />
+              <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" />
             </div>
             <div>
               <Label>E-mail</Label>
-              <Input type="email" value={form.email || ""} onChange={(e) => updateField("email", e.target.value)} placeholder="email@exemplo.com" />
+              <Input type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@exemplo.com" />
             </div>
             <div>
               <Label>Cidade</Label>
-              <Input value={form.city || ""} onChange={(e) => updateField("city", e.target.value)} />
+              <Input value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} />
             </div>
             <div>
               <Label>Bairro</Label>
-              <Input value={form.neighborhood || ""} onChange={(e) => updateField("neighborhood", e.target.value)} />
+              <Input value={form.neighborhood || ""} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} />
             </div>
             <div className="sm:col-span-2">
               <Label>Endereço</Label>
-              <Input value={form.address || ""} onChange={(e) => updateField("address", e.target.value)} placeholder="Rua, número, complemento" />
+              <Input value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número, complemento" />
             </div>
             <div className="sm:col-span-2">
               <Label>Observações</Label>
