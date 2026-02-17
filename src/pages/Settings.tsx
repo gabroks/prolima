@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -128,9 +129,9 @@ export default function SettingsPage() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div><Label>Razão Social *</Label><Input value={settings.razaoSocial} onChange={(e) => update("razaoSocial", e.target.value)} /></div>
               <div><Label>Nome Fantasia *</Label><Input value={settings.nomeFantasia} onChange={(e) => update("nomeFantasia", e.target.value)} /></div>
-              <div><Label>CNPJ</Label><Input value={settings.cnpj} onChange={(e) => update("cnpj", e.target.value)} placeholder="00.000.000/0001-00" /></div>
+              <div><Label>CNPJ</Label><MaskedInput mask="cnpj" value={settings.cnpj} onValueChange={(v) => update("cnpj", v)} placeholder="00.000.000/0001-00" /></div>
               <div><Label>Inscrição Estadual</Label><Input value={settings.inscricaoEstadual} onChange={(e) => update("inscricaoEstadual", e.target.value)} /></div>
-              <div><Label className="flex items-center gap-1.5"><Phone className="h-3 w-3" />Telefone</Label><Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(00) 0000-0000" /></div>
+              <div><Label className="flex items-center gap-1.5"><Phone className="h-3 w-3" />Telefone</Label><MaskedInput mask="phone" value={settings.phone} onValueChange={(v) => update("phone", v)} placeholder="(00) 00000-0000" /></div>
               <div><Label className="flex items-center gap-1.5"><Mail className="h-3 w-3" />E-mail</Label><Input value={settings.email} onChange={(e) => update("email", e.target.value)} placeholder="contato@empresa.com" /></div>
             </CardContent>
           </Card>
@@ -146,7 +147,7 @@ export default function SettingsPage() {
                   <SelectContent>{STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>CEP</Label><Input value={settings.cep} onChange={(e) => update("cep", e.target.value)} placeholder="00000-000" /></div>
+              <div><Label>CEP</Label><MaskedInput mask="cep" value={settings.cep} onValueChange={(v) => update("cep", v)} placeholder="00000-000" /></div>
             </CardContent>
           </Card>
           <Card>
