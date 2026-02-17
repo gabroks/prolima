@@ -18,6 +18,7 @@ import {
   FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
 } from "lucide-react";
 import { FileUpload } from "@/components/settings/FileUpload";
+import { AdminClientsList } from "@/components/settings/AdminClientsList";
 
 
 const colorOptions = [
@@ -334,7 +335,7 @@ export default function SettingsPage() {
                 <Badge className="ml-auto">Admin</Badge>
               </CardContent>
             </Card>
-            {/* Admin content here */}
+            <AdminClientsList />
           </TabsContent>
         )}
       </Tabs>
