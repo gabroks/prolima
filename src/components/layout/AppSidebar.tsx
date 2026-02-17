@@ -20,6 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { getInitials } from "@/lib/formatters";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 
 interface MenuItem {
   title: string;
@@ -101,6 +102,7 @@ export function AppSidebar() {
   const displayEmail = user?.email || "usuario@email.com";
   const initials = getInitials(displayName);
   const { theme, setTheme } = useTheme();
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
 
   const handleLogout = async () => {
     await signOut();
@@ -159,7 +161,7 @@ export function AppSidebar() {
                   activeClassName="bg-sidebar-accent text-sidebar-primary"
                 >
                   <Bell className="h-3.5 w-3.5" />
-                  <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-sidebar-primary ring-1 ring-sidebar-background animate-pulse" />
+                  {unreadCount > 0 && <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-sidebar-primary ring-1 ring-sidebar-background animate-pulse" />}
                 </NavLink>
               </TooltipTrigger>
               <TooltipContent side="right" className="text-xs">Notificações</TooltipContent>

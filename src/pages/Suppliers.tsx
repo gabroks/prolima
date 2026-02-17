@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -291,11 +292,11 @@ export default function Suppliers() {
             </div>
             <div>
               <Label>{form.personType === "juridica" ? "CNPJ" : "CPF"}</Label>
-              <Input value={form.document || ""} onChange={(e) => setForm({ ...form, document: e.target.value })} placeholder={form.personType === "juridica" ? "00.000.000/0001-00" : "000.000.000-00"} />
+              <MaskedInput mask={form.personType === "juridica" ? "cnpj" : "cpf"} value={form.document || ""} onValueChange={(v) => setForm({ ...form, document: v })} placeholder={form.personType === "juridica" ? "00.000.000/0001-00" : "000.000.000-00"} />
             </div>
             <div>
               <Label>Telefone</Label>
-              <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" />
+              <MaskedInput mask="phone" value={form.phone || ""} onValueChange={(v) => setForm({ ...form, phone: v })} placeholder="(00) 00000-0000" />
             </div>
             <div>
               <Label>E-mail</Label>
