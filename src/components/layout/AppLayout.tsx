@@ -18,9 +18,15 @@ const routeNames: Record<string, string> = {
   "/notificacoes": "Notificações",
 };
 
+function getPageName(pathname: string): string {
+  if (routeNames[pathname]) return routeNames[pathname];
+  if (pathname.startsWith("/clientes/")) return "Detalhe do Cliente";
+  return "Página";
+}
+
 export function AppLayout() {
   const location = useLocation();
-  const pageName = routeNames[location.pathname] || "Página";
+  const pageName = getPageName(location.pathname);
 
   return (
     <SidebarProvider>

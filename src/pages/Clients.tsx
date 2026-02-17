@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { formatDate } from "@/lib/formatters";
 const emptyForm: Partial<Client> = { personType: "fisica", status: "active" };
 
 export default function Clients() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>(mockClients);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -164,10 +166,10 @@ export default function Clients() {
                   </TableCell>
                 </TableRow>
               ) : filtered.map((c) => (
-                <TableRow key={c.id} className="group">
+                <TableRow key={c.id} className="group cursor-pointer" onClick={() => navigate(`/clientes/${c.id}`)}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{c.name}</p>
+                      <p className="font-medium text-primary hover:underline">{c.name}</p>
                       <p className="text-xs text-muted-foreground md:hidden">{c.phone}</p>
                     </div>
                   </TableCell>
