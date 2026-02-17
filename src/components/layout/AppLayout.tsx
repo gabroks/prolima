@@ -3,11 +3,9 @@ import { AppSidebar } from "./AppSidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Bell, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Bell } from "lucide-react";
+import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState } from "react";
 
 const routeNames: Record<string, string> = {
   "/": "Dashboard",
@@ -54,6 +52,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const pageName = getPageName(location.pathname);
   const parent = getParentRoute(location.pathname);
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
 
   return (
     <SidebarProvider>
@@ -105,7 +104,7 @@ export function AppLayout() {
                     onClick={() => navigate("/notificacoes")}
                   >
                     <Bell className="h-4 w-4" />
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+                    {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">Notificações</TooltipContent>
