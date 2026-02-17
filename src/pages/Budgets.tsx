@@ -144,7 +144,7 @@ export default function Budgets() {
                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/editar-orcamento/${b.id}`)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { downloadBudgetPdf(b, companySettings); toast.success("PDF gerado!"); }} title="Baixar PDF"><Download className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadBudgetPdf(b, companySettings).then(() => toast.success("PDF gerado!"))} title="Baixar PDF"><Download className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(b)} disabled={duplicateBudget.isPending} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(b.id)} disabled={deleteBudget.isPending} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
@@ -232,7 +232,7 @@ export default function Budgets() {
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="default" size="sm" onClick={() => { downloadBudgetPdf(detailBudget, companySettings); toast.success("PDF gerado!"); }}>
+                    <Button variant="default" size="sm" onClick={() => downloadBudgetPdf(detailBudget, companySettings).then(() => toast.success("PDF gerado!"))}>
                       <Download className="h-3.5 w-3.5 mr-1.5" />Baixar PDF
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => { setDetailBudget(null); navigate(`/editar-orcamento/${detailBudget.id}`); }}>
