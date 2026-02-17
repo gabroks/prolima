@@ -4,10 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { mockCompanySettings } from "@/data/mock";
 import { CompanySettings } from "@/types";
-import { Upload, Building2, Palette, QrCode, Save } from "lucide-react";
+import {
+  Upload, Building2, Palette, QrCode, Save, Check,
+  FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const colorOptions = [
@@ -21,70 +28,261 @@ const colorOptions = [
   { name: "Índigo", value: "indigo", hsl: "240 60% 55%" },
 ];
 
+const STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<CompanySettings>(mockCompanySettings);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  const update = (field: keyof CompanySettings, value: string) =>
+  // Notification prefs
+  const [notifBudgetApproved, setNotifBudgetApproved] = useState(true);
+  const [notifPaymentReceived, setNotifPaymentReceived] = useState(true);
+  const [notifBudgetExpiring, setNotifBudgetExpiring] = useState(true);
+  const [notifWeeklyReport, setNotifWeeklyReport] = useState(false);
+
+  // Document prefs
+  const [docShowLogo, setDocShowLogo] = useState(true);
+  const [docShowPhone, setDocShowPhone] = useState(true);
+  const [docShowAddress, setDocShowAddress] = useState(true);
+  const [docFooterText, setDocFooterText] = useState("Orçamento válido por 15 dias. Valores sujeitos a alteração sem aviso prévio.");
+  const [docValidityDays, setDocValidityDays] = useState("15");
+
+  const update = (field: keyof CompanySettings, value: string) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
 
-  const handleSave = () => toast.success("Configurações salvas com sucesso!");
+  const handleSave = () => {
+    setHasChanges(false);
+    toast.success("Configurações salvas com sucesso!");
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold">Configurações</h2>
-        <Button onClick={handleSave}><Save className="h-4 w-4 mr-2" />Salvar Alterações</Button>
+        <div>
+          <h2 className="text-2xl font-bold">Configurações</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Gerencie as preferências do sistema e da empresa</p>
+        </div>
+        <Button onClick={handleSave} disabled={!hasChanges} className="shadow-md shadow-primary/20">
+          <Save className="h-4 w-4 mr-2" />Salvar Alterações
+          {hasChanges && <Badge className="ml-2 h-5 px-1.5 bg-primary-foreground text-primary text-[10px]">Pendente</Badge>}
+        </Button>
       </div>
 
       <Tabs defaultValue="empresa" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="empresa">Empresa</TabsTrigger>
-          <TabsTrigger value="visual">Visual</TabsTrigger>
-          <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="empresa" className="text-xs sm:text-sm">
+            <Building2 className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Empresa
+          </TabsTrigger>
+          <TabsTrigger value="documentos" className="text-xs sm:text-sm">
+            <FileText className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Documentos
+          </TabsTrigger>
+          <TabsTrigger value="visual" className="text-xs sm:text-sm">
+            <Palette className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Visual
+          </TabsTrigger>
+          <TabsTrigger value="notificacoes" className="text-xs sm:text-sm">
+            <Bell className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Alertas
+          </TabsTrigger>
         </TabsList>
 
+        {/* EMPRESA */}
         <TabsContent value="empresa" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" />Dados da Empresa</CardTitle>
-              <CardDescription>Informações que aparecem nos orçamentos emitidos.</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />Dados da Empresa
+              </CardTitle>
+              <CardDescription>Informações que aparecem nos orçamentos e documentos emitidos.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div><Label>Razão Social</Label><Input value={settings.razaoSocial} onChange={(e) => update("razaoSocial", e.target.value)} /></div>
-              <div><Label>Nome Fantasia</Label><Input value={settings.nomeFantasia} onChange={(e) => update("nomeFantasia", e.target.value)} /></div>
-              <div><Label>CNPJ</Label><Input value={settings.cnpj} onChange={(e) => update("cnpj", e.target.value)} /></div>
-              <div><Label>Inscrição Estadual</Label><Input value={settings.inscricaoEstadual} onChange={(e) => update("inscricaoEstadual", e.target.value)} /></div>
-              <div><Label>Telefone</Label><Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} /></div>
-              <div><Label>E-mail</Label><Input value={settings.email} onChange={(e) => update("email", e.target.value)} /></div>
-              <Separator className="sm:col-span-2" />
-              <div className="sm:col-span-2"><Label>Rua / Logradouro</Label><Input value={settings.street} onChange={(e) => update("street", e.target.value)} /></div>
-              <div><Label>Bairro</Label><Input value={settings.neighborhood} onChange={(e) => update("neighborhood", e.target.value)} /></div>
-              <div><Label>Cidade</Label><Input value={settings.city} onChange={(e) => update("city", e.target.value)} /></div>
-              <div><Label>Estado</Label><Input value={settings.state} onChange={(e) => update("state", e.target.value)} maxLength={2} /></div>
-              <div><Label>CEP</Label><Input value={settings.cep} onChange={(e) => update("cep", e.target.value)} /></div>
+              <div>
+                <Label>Razão Social *</Label>
+                <Input value={settings.razaoSocial} onChange={(e) => update("razaoSocial", e.target.value)} />
+              </div>
+              <div>
+                <Label>Nome Fantasia *</Label>
+                <Input value={settings.nomeFantasia} onChange={(e) => update("nomeFantasia", e.target.value)} />
+              </div>
+              <div>
+                <Label>CNPJ</Label>
+                <Input value={settings.cnpj} onChange={(e) => update("cnpj", e.target.value)} placeholder="00.000.000/0001-00" />
+              </div>
+              <div>
+                <Label>Inscrição Estadual</Label>
+                <Input value={settings.inscricaoEstadual} onChange={(e) => update("inscricaoEstadual", e.target.value)} />
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><Phone className="h-3 w-3" />Telefone</Label>
+                <Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(00) 0000-0000" />
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><Mail className="h-3 w-3" />E-mail</Label>
+                <Input value={settings.email} onChange={(e) => update("email", e.target.value)} placeholder="contato@empresa.com" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />Endereço
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label>Rua / Logradouro</Label>
+                <Input value={settings.street} onChange={(e) => update("street", e.target.value)} placeholder="Rua, número, complemento" />
+              </div>
+              <div>
+                <Label>Bairro</Label>
+                <Input value={settings.neighborhood} onChange={(e) => update("neighborhood", e.target.value)} />
+              </div>
+              <div>
+                <Label>Cidade</Label>
+                <Input value={settings.city} onChange={(e) => update("city", e.target.value)} />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <Select value={settings.state} onValueChange={(v) => update("state", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>CEP</Label>
+                <Input value={settings.cep} onChange={(e) => update("cep", e.target.value)} placeholder="00000-000" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Logo da Empresa</CardTitle>
-              <CardDescription>Será exibida nos orçamentos e documentos.</CardDescription>
+              <CardDescription>Será exibida no cabeçalho dos orçamentos e documentos.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Clique para fazer upload ou arraste a imagem</p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG até 2MB</p>
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG ou SVG — até 2MB — recomendado 400×120px</p>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="visual">
+        {/* DOCUMENTOS */}
+        <TabsContent value="documentos" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Palette className="h-4 w-4" />Tema do Sistema</CardTitle>
-              <CardDescription>Escolha a cor principal do sistema e dos documentos.</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Printer className="h-4 w-4 text-primary" />Configurações de Orçamento
+              </CardTitle>
+              <CardDescription>Defina o que aparece nos orçamentos gerados.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Validade padrão (dias)</Label>
+                  <Input type="number" min="1" max="90" value={docValidityDays} onChange={(e) => { setDocValidityDays(e.target.value); setHasChanges(true); }} />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold">Exibir no cabeçalho</h4>
+                {[
+                  { label: "Logo da empresa", desc: "Mostra a logo no topo do documento", checked: docShowLogo, onChange: setDocShowLogo },
+                  { label: "Telefone de contato", desc: "Exibe o telefone da empresa", checked: docShowPhone, onChange: setDocShowPhone },
+                  { label: "Endereço completo", desc: "Mostra o endereço no cabeçalho", checked: docShowAddress, onChange: setDocShowAddress },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <Switch checked={item.checked} onCheckedChange={(v) => { item.onChange(v); setHasChanges(true); }} />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label>Texto do rodapé</Label>
+                <Textarea
+                  value={docFooterText}
+                  onChange={(e) => { setDocFooterText(e.target.value); setHasChanges(true); }}
+                  rows={3}
+                  placeholder="Texto exibido no rodapé dos orçamentos…"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Este texto aparece ao final de cada orçamento emitido.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preview Header */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Prévia do Cabeçalho</CardTitle>
+              <CardDescription>Como ficará o topo dos seus orçamentos.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg p-5 bg-background space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    {docShowLogo && (
+                      <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>
+                    )}
+                    <p className="font-bold text-sm">{settings.nomeFantasia || settings.razaoSocial}</p>
+                    <p className="text-[11px] text-muted-foreground">{settings.razaoSocial}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">{settings.cnpj}</p>
+                  </div>
+                  <div className="text-right text-[11px] text-muted-foreground space-y-0.5">
+                    {docShowPhone && <p>{settings.phone}</p>}
+                    <p>{settings.email}</p>
+                    {docShowAddress && (
+                      <p>{settings.street}, {settings.neighborhood}<br />{settings.city} - {settings.state}, {settings.cep}</p>
+                    )}
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-[11px]">
+                  <span className="font-semibold">ORÇAMENTO Nº ORC-001</span>
+                  <span className="text-muted-foreground">Válido por {docValidityDays} dias</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <QrCode className="h-4 w-4 text-primary" />QR Code PIX
+              </CardTitle>
+              <CardDescription>QR code exibido nos orçamentos para pagamento via PIX.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                <QrCode className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Clique para fazer upload do QR Code PIX</p>
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG — até 1MB</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* VISUAL */}
+        <TabsContent value="visual" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Palette className="h-4 w-4 text-primary" />Cor Principal
+              </CardTitle>
+              <CardDescription>Cor usada nos documentos e detalhes do sistema.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
@@ -92,33 +290,93 @@ export default function SettingsPage() {
                   <button
                     key={color.value}
                     onClick={() => update("themeColor", color.value)}
-                    className={`flex flex-col items-center gap-1.5 p-2 rounded-lg border-2 transition-all ${
+                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border-2 transition-all ${
                       settings.themeColor === color.value
-                        ? "border-primary shadow-md scale-105"
+                        ? "border-foreground shadow-md scale-105"
                         : "border-transparent hover:border-border"
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-full shadow-sm" style={{ backgroundColor: `hsl(${color.hsl})` }} />
+                    <div className="w-9 h-9 rounded-full shadow-sm relative" style={{ backgroundColor: `hsl(${color.hsl})` }}>
+                      {settings.themeColor === color.value && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Check className="h-4 w-4 text-white drop-shadow" />
+                        </div>
+                      )}
+                    </div>
                     <span className="text-[10px] font-medium">{color.name}</span>
                   </button>
                 ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                A cor selecionada será aplicada nos documentos gerados (orçamentos, relatórios).
+                O tema do sistema pode ser alternado entre claro/escuro na sidebar.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Color Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Prévia da Cor</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-3">
+                {["Botão primário", "Badge status", "Cabeçalho doc"].map((label, i) => {
+                  const selectedColor = colorOptions.find(c => c.value === settings.themeColor);
+                  const hsl = selectedColor?.hsl || "152 58% 36%";
+                  return (
+                    <div key={label} className="rounded-lg border p-4 flex flex-col items-center gap-2">
+                      {i === 0 && (
+                        <div className="px-4 py-2 rounded-md text-white text-xs font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>
+                          Emitir Orçamento
+                        </div>
+                      )}
+                      {i === 1 && (
+                        <div className="px-2.5 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>
+                          Aprovado
+                        </div>
+                      )}
+                      {i === 2 && (
+                        <div className="w-full h-2 rounded-full" style={{ backgroundColor: `hsl(${hsl})` }} />
+                      )}
+                      <span className="text-[10px] text-muted-foreground">{label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="pagamento">
+        {/* NOTIFICAÇÕES */}
+        <TabsContent value="notificacoes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><QrCode className="h-4 w-4" />QR Code PIX</CardTitle>
-              <CardDescription>QR code para pagamentos via PIX nos orçamentos.</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary" />Preferências de Notificação
+              </CardTitle>
+              <CardDescription>Escolha quais alertas deseja receber.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <QrCode className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Clique para fazer upload do QR Code PIX</p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG até 1MB</p>
-              </div>
+            <CardContent className="space-y-4">
+              {[
+                { label: "Orçamento aprovado", desc: "Notificar quando um cliente aprovar um orçamento", checked: notifBudgetApproved, onChange: setNotifBudgetApproved, icon: FileText },
+                { label: "Pagamento recebido", desc: "Notificar ao registrar um novo pagamento", checked: notifPaymentReceived, onChange: setNotifPaymentReceived, icon: Shield },
+                { label: "Orçamento expirando", desc: "Alertar quando um orçamento estiver próximo da validade", checked: notifBudgetExpiring, onChange: setNotifBudgetExpiring, icon: Bell },
+                { label: "Relatório semanal", desc: "Enviar resumo semanal de atividades por e-mail", checked: notifWeeklyReport, onChange: setNotifWeeklyReport, icon: Globe },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <item.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                  <Switch checked={item.checked} onCheckedChange={(v) => { item.onChange(v); setHasChanges(true); }} />
+                </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
