@@ -91,13 +91,13 @@ export default function Notifications() {
         </div>
         <div className="flex gap-2">
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()}>
-              <CheckCheck className="h-4 w-4 mr-1.5" />Marcar lidas
+            <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
+              <CheckCheck className="h-4 w-4 mr-1.5" />{markAllRead.isPending ? "Marcando…" : "Marcar lidas"}
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => clearAll.mutate()}>
-              <Trash2 className="h-4 w-4 mr-1.5" />Limpar
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => clearAll.mutate()} disabled={clearAll.isPending}>
+              <Trash2 className="h-4 w-4 mr-1.5" />{clearAll.isPending ? "Limpando…" : "Limpar"}
             </Button>
           )}
         </div>
@@ -163,11 +163,11 @@ export default function Notifications() {
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     {!n.read && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => markRead.mutate(n.id)} title="Marcar como lida">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => markRead.mutate(n.id)} disabled={markRead.isPending} title="Marcar como lida">
                         <Check className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteNotif.mutate(n.id)} title="Remover">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteNotif.mutate(n.id)} disabled={deleteNotif.isPending} title="Remover">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
