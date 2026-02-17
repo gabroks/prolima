@@ -495,6 +495,36 @@ export type Database = {
         }
         Relationships: []
       }
+      system_limits: {
+        Row: {
+          created_at: string
+          id: string
+          max_budgets: number
+          max_clients: number
+          max_materials: number
+          max_suppliers: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_budgets?: number
+          max_clients?: number
+          max_materials?: number
+          max_suppliers?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_budgets?: number
+          max_clients?: number
+          max_materials?: number
+          max_suppliers?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
