@@ -23,9 +23,10 @@ interface Props {
   editingId: string | null;
   budgets: BudgetWithItems[];
   suppliers: Supplier[];
+  isSaving?: boolean;
 }
 
-export function ExpenseFormDialog({ open, onOpenChange, form, setForm, onSave, editingId, budgets, suppliers }: Props) {
+export function ExpenseFormDialog({ open, onOpenChange, form, setForm, onSave, editingId, budgets, suppliers, isSaving }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -80,7 +81,7 @@ export function ExpenseFormDialog({ open, onOpenChange, form, setForm, onSave, e
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={onSave}>{editingId ? "Atualizar" : "Salvar"}</Button>
+          <Button onClick={onSave} disabled={isSaving}>{editingId ? "Atualizar" : "Salvar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

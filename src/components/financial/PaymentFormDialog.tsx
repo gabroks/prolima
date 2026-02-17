@@ -18,9 +18,10 @@ interface Props {
   onSave: () => void;
   editingId: string | null;
   approvedBudgets: BudgetWithItems[];
+  isSaving?: boolean;
 }
 
-export function PaymentFormDialog({ open, onOpenChange, form, setForm, onSave, editingId, approvedBudgets }: Props) {
+export function PaymentFormDialog({ open, onOpenChange, form, setForm, onSave, editingId, approvedBudgets, isSaving }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -64,7 +65,7 @@ export function PaymentFormDialog({ open, onOpenChange, form, setForm, onSave, e
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={onSave}>{editingId ? "Atualizar" : "Salvar"}</Button>
+          <Button onClick={onSave} disabled={isSaving}>{editingId ? "Atualizar" : "Salvar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
