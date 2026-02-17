@@ -195,8 +195,8 @@ export default function NewBudget() {
         <Button variant="outline" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}><ChevronLeft className="h-4 w-4 mr-1.5" />Voltar</Button>
         <div className="flex gap-2">
           {step < 3 ? <Button onClick={() => setStep(s => Math.min(3, s + 1))} disabled={!canProceed(step)}>Próximo<ChevronRight className="h-4 w-4 ml-1.5" /></Button> : (<>
-            <Button variant="outline" onClick={() => handleSave(true)} disabled={createBudget.isPending}><Save className="h-4 w-4 mr-1.5" />Salvar Rascunho</Button>
-            <Button onClick={() => handleSave(false)} disabled={createBudget.isPending} className="shadow-md shadow-primary/20"><Send className="h-4 w-4 mr-1.5" />Emitir Orçamento</Button>
+            <Button variant="outline" onClick={() => handleSave(true)} disabled={createBudget.isPending}><Save className="h-4 w-4 mr-1.5" />{createBudget.isPending ? "Salvando…" : "Salvar Rascunho"}</Button>
+            <Button onClick={() => handleSave(false)} disabled={createBudget.isPending} className="shadow-md shadow-primary/20"><Send className="h-4 w-4 mr-1.5" />{createBudget.isPending ? "Emitindo…" : "Emitir Orçamento"}</Button>
           </>)}
         </div>
       </div>
