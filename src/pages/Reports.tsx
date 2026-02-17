@@ -17,8 +17,9 @@ import {
 } from "recharts";
 import {
   TrendingUp, TrendingDown, Users, FileText, DollarSign, Receipt,
-  Target, Award, MapPin, CalendarRange, X,
+  Target, Award, MapPin, CalendarRange, X, Download,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const PIE_COLORS = [
   "hsl(var(--primary))", "hsl(var(--chart-3))", "hsl(var(--chart-4))",
@@ -94,12 +95,39 @@ export default function Reports() {
   const ticketMedio = filteredBudgets.length > 0 ? totalBudgetValue / filteredBudgets.length : 0;
   const margem = totalReceitas > 0 ? Math.round(((totalReceitas - totalDespesas) / totalReceitas) * 100) : 0;
 
+  const handleExportCSV = () => {
+    const rows = [["Mês", "Receitas", "Despesas", "Saldo"]];
+    monthlyData.forEach(d => rows.push([d.month, d.receitas.toFixed(2), d.despesas.toFixed(2), d.saldo.toFixed(2)]));
+    rows.push([]);
+    rows.push(["Indicador", "Valor"]);
+    rows.push(["Total Receitas", totalReceitas.toFixed(2)]);
+    rows.push(["Total Despesas", totalDespesas.toFixed(2)]);
+    rows.push(["Saldo", saldo.toFixed(2)]);
+    rows.push(["Conversão", `${conversionRate}%`]);
+    rows.push(["Ticket Médio", ticketMedio.toFixed(2)]);
+    rows.push(["Margem", `${margem}%`]);
+    const csv = rows.map(r => r.join(";")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-${dateFrom}-a-${dateTo}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Relatório exportado com sucesso!");
+  };
+
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div><h2 className="text-2xl font-bold">Relatórios</h2><p className="text-sm text-muted-foreground mt-0.5">Visão consolidada do desempenho do seu negócio</p></div>
+        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={monthlyData.length === 0}>
+          <Download className="h-4 w-4 mr-1.5" />Exportar CSV
+        </Button>
       </div>
 
       {/* Date Range Filter */}
