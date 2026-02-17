@@ -102,7 +102,7 @@ export default function Login() {
           </p>
         </div>
 
-        <p className="text-sm text-white/30">© 2025 Pro Orçamento. Todos os direitos reservados.</p>
+        <p className="text-sm text-white/30">© {new Date().getFullYear()} Pro Orçamento. Todos os direitos reservados.</p>
       </div>
 
       {/* Right panel - form */}

@@ -98,8 +98,7 @@ export default function SettingsPage() {
         notif_budget_expiring: settings.notifBudgetExpiring,
         notif_weekly_report: settings.notifWeeklyReport,
       },
-    });
-    setHasChanges(false);
+    }, { onSuccess: () => setHasChanges(false) });
   };
 
   if (isLoading || !settings) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-96" /></div>;
