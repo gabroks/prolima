@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Truck, Package, FilePlus, FileText,
   DollarSign, Receipt, Settings, Database, LogOut, Bell, Pencil,
-  ChevronRight, Shield, Moon, Sun,
+  ChevronRight, Shield, Moon, Sun, BarChart3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -40,6 +40,7 @@ const orcamentoItems: MenuItem[] = [
 const financeiroItems: MenuItem[] = [
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
   { title: "Despesas", url: "/despesas", icon: Receipt },
+  { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
 ];
 
 const systemItems: MenuItem[] = [
