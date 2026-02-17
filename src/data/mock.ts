@@ -61,11 +61,32 @@ export const mockBudgets: Budget[] = [
 
 export const mockPayments: Payment[] = [
   { id: "1", budgetId: "1", budgetNumber: "ORC-001", clientName: "João Silva", amount: 647, method: "PIX", date: "2025-02-11", notes: "Entrada 50%" },
+  { id: "2", budgetId: "1", budgetNumber: "ORC-001", clientName: "João Silva", amount: 647, method: "PIX", date: "2025-03-05", notes: "Parcela final" },
+  { id: "3", budgetId: "2", budgetNumber: "ORC-002", clientName: "Construtora ABC Ltda", amount: 6880, method: "Boleto", date: "2025-03-10", notes: "1ª parcela" },
+  { id: "4", budgetId: "2", budgetNumber: "ORC-002", clientName: "Construtora ABC Ltda", amount: 6880, method: "Boleto", date: "2025-04-10", notes: "2ª parcela" },
+  { id: "5", budgetId: "2", budgetNumber: "ORC-002", clientName: "Construtora ABC Ltda", amount: 6890, method: "Boleto", date: "2025-05-10", notes: "3ª parcela" },
+  { id: "6", budgetId: "3", budgetNumber: "ORC-003", clientName: "Maria Oliveira", amount: 570, method: "PIX", date: "2025-04-15" },
+  { id: "7", budgetId: "1", budgetNumber: "ORC-001", clientName: "João Silva", amount: 1200, method: "Transferência", date: "2025-01-20", notes: "Serviço avulso" },
+  { id: "8", budgetId: "2", budgetNumber: "ORC-002", clientName: "Construtora ABC Ltda", amount: 3500, method: "PIX", date: "2024-12-15", notes: "Adiantamento" },
 ];
 
 export const mockExpenses: Expense[] = [
   { id: "1", budgetId: "1", budgetNumber: "ORC-001", description: "Compra de vidro temperado", supplierId: "1", supplierName: "Vidraçaria Premium", category: "Material", amount: 800, date: "2025-02-12" },
   { id: "2", description: "Aluguel do galpão", category: "Fixo", amount: 2500, date: "2025-02-01" },
+  { id: "3", description: "Aluguel do galpão", category: "Fixo", amount: 2500, date: "2025-01-01" },
+  { id: "4", description: "Aluguel do galpão", category: "Fixo", amount: 2500, date: "2024-12-01" },
+  { id: "5", description: "Aluguel do galpão", category: "Fixo", amount: 2500, date: "2025-03-01" },
+  { id: "6", description: "Aluguel do galpão", category: "Fixo", amount: 2500, date: "2025-04-01" },
+  { id: "7", description: "Aluguel do galpão", category: "Fixo", amount: 2500, date: "2025-05-01" },
+  { id: "8", budgetId: "2", budgetNumber: "ORC-002", description: "Vidro laminado para fachada", supplierId: "1", supplierName: "Vidraçaria Premium", category: "Material", amount: 8500, date: "2025-03-05" },
+  { id: "9", description: "Combustível entregas", category: "Transporte", amount: 450, date: "2025-02-15" },
+  { id: "10", description: "Combustível entregas", category: "Transporte", amount: 380, date: "2025-03-18" },
+  { id: "11", description: "Combustível entregas", category: "Transporte", amount: 420, date: "2025-04-12" },
+  { id: "12", description: "Manutenção equipamentos", category: "Manutenção", amount: 1200, date: "2025-01-20" },
+  { id: "13", description: "Ferramentas novas", category: "Equipamento", amount: 950, date: "2025-03-25" },
+  { id: "14", description: "Internet e telefone", category: "Fixo", amount: 280, date: "2025-02-05" },
+  { id: "15", description: "Internet e telefone", category: "Fixo", amount: 280, date: "2025-03-05" },
+  { id: "16", budgetId: "1", budgetNumber: "ORC-001", description: "Silicone e acessórios", supplierId: "1", supplierName: "Vidraçaria Premium", category: "Material", amount: 320, date: "2025-02-10" },
 ];
 
 export const mockCompanySettings: CompanySettings = {

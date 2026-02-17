@@ -18,6 +18,7 @@ const routeNames: Record<string, string> = {
   "/orcamentos": "Orçamentos",
   "/financeiro": "Financeiro",
   "/despesas": "Despesas",
+  "/relatorios": "Relatórios",
   "/configuracoes": "Configurações",
   "/backup": "Backup dos Dados",
   "/perfil": "Perfil",
@@ -32,6 +33,7 @@ const routeParents: Record<string, { name: string; path: string }> = {
   "/orcamentos": { name: "Orçamentos", path: "/orcamentos" },
   "/financeiro": { name: "Financeiro", path: "/financeiro" },
   "/despesas": { name: "Financeiro", path: "/despesas" },
+  "/relatorios": { name: "Financeiro", path: "/relatorios" },
   "/configuracoes": { name: "Sistema", path: "/configuracoes" },
   "/backup": { name: "Sistema", path: "/backup" },
 };
