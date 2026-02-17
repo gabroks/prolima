@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClients } from "@/hooks/useClients";
 import { useMaterials } from "@/hooks/useMaterials";
@@ -24,16 +25,29 @@ function getGreeting(): string {
 
 export default function Dashboard() {
   const { data: clients = [], isLoading: loadingClients } = useClients();
-  const { data: materials = [] } = useMaterials();
+  const { data: materials = [], isLoading: loadingMaterials } = useMaterials();
   const { data: budgets = [], isLoading: loadingBudgets } = useBudgets();
-  const { data: payments = [] } = usePayments();
-  const { data: expenses = [] } = useExpenses();
+  const { data: payments = [], isLoading: loadingPayments } = usePayments();
+  const { data: expenses = [], isLoading: loadingExpenses } = useExpenses();
 
-  const isLoading = loadingClients || loadingBudgets;
+  const isLoading = loadingClients || loadingBudgets || loadingMaterials || loadingPayments || loadingExpenses;
+
+  // Current month filter for financial data
+  const currentMonthKey = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+
+  const monthPayments = useMemo(() => payments.filter((p) => p.date.startsWith(currentMonthKey)), [payments, currentMonthKey]);
+  const monthExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(currentMonthKey)), [expenses, currentMonthKey]);
 
   const totalReceitas = payments.reduce((s, p) => s + Number(p.amount), 0);
   const totalDespesas = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const saldo = totalReceitas - totalDespesas;
+
+  const monthReceitas = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const monthDespesas = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const monthSaldo = monthReceitas - monthDespesas;
 
   const approvedBudgets = budgets.filter((b) => b.status === "approved");
   const totalApproved = approvedBudgets.reduce((s, b) => s + Number(b.total), 0);
@@ -43,7 +57,7 @@ export default function Dashboard() {
     { title: "Clientes", value: clients.length, subtitle: `${clients.filter((c) => c.status === "active").length} ativos`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
     { title: "Materiais", value: materials.length, subtitle: "no catálogo", icon: Package, trend: null, trendUp: true, href: "/materiais" },
     { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovados`, icon: FileText, trend: `${pendingBudgets.length} pendentes`, trendUp: true, href: "/orcamentos" },
-    { title: "Saldo", value: formatCurrency(saldo), subtitle: saldo >= 0 ? "Positivo" : "Negativo", icon: saldo >= 0 ? TrendingUp : TrendingDown, trend: saldo >= 0 ? "Saudável" : "Atenção", trendUp: saldo >= 0, href: "/financeiro" },
+    { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: monthSaldo >= 0 ? "Saudável" : "Atenção", trendUp: monthSaldo >= 0, href: "/financeiro" },
   ];
 
   if (isLoading) {
@@ -53,7 +67,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
         </div>
-        <Skeleton className="h-64" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64 lg:col-span-2" />
+        </div>
       </div>
     );
   }
@@ -67,8 +87,11 @@ export default function Dashboard() {
             {getGreeting()}! <Sparkles className="h-5 w-5 text-primary" />
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Você tem <span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}
-            orçamento{pendingBudgets.length !== 1 && "s"} pendente{pendingBudgets.length !== 1 && "s"} hoje
+            {pendingBudgets.length > 0 ? (
+              <>Você tem <span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}orçamento{pendingBudgets.length !== 1 && "s"} pendente{pendingBudgets.length !== 1 && "s"}</>
+            ) : (
+              "Tudo em dia — nenhuma pendência no momento"
+            )}
           </p>
         </div>
         <QuickActions />
@@ -82,7 +105,13 @@ export default function Dashboard() {
 
       {/* Financial Summary + Revenue Chart */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <FinancialSummary totalReceitas={totalReceitas} totalDespesas={totalDespesas} totalApproved={totalApproved} />
+        <FinancialSummary
+          totalReceitas={totalReceitas}
+          totalDespesas={totalDespesas}
+          totalApproved={totalApproved}
+          monthReceitas={monthReceitas}
+          monthDespesas={monthDespesas}
+        />
         <RevenueChart payments={payments} expenses={expenses} />
       </div>
 

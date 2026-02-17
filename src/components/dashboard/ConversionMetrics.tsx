@@ -15,8 +15,18 @@ interface ConversionMetricsProps {
 
 export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: ConversionMetricsProps) {
   const navigate = useNavigate();
-  const conversionRate = budgets.length > 0 ? Math.round((approvedBudgets.length / budgets.length) * 100) : 0;
-  const ticketMedio = budgets.length > 0 ? budgets.reduce((s, b) => s + Number(b.total), 0) / budgets.length : 0;
+
+  // Exclude drafts from conversion calc — only issued/approved/rejected are meaningful
+  const issuedOrBeyond = budgets.filter((b) => b.status !== "draft");
+  const conversionRate = issuedOrBeyond.length > 0
+    ? Math.round((approvedBudgets.length / issuedOrBeyond.length) * 100)
+    : 0;
+
+  // Ticket médio only from non-draft budgets with total > 0
+  const budgetsWithValue = budgets.filter((b) => Number(b.total) > 0);
+  const ticketMedio = budgetsWithValue.length > 0
+    ? budgetsWithValue.reduce((s, b) => s + Number(b.total), 0) / budgetsWithValue.length
+    : 0;
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -29,7 +39,7 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
           </div>
           <Progress value={conversionRate} className="h-2" />
           <p className="text-[11px] text-muted-foreground mt-2">
-            {approvedBudgets.length} de {budgets.length} orçamentos convertidos
+            {approvedBudgets.length} de {issuedOrBeyond.length} orçamentos emitidos
           </p>
         </CardContent>
       </Card>
@@ -43,7 +53,7 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">
-            Valor médio por orçamento
+            Baseado em {budgetsWithValue.length} orçamento{budgetsWithValue.length !== 1 && "s"}
           </p>
         </CardContent>
       </Card>
