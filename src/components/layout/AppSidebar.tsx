@@ -10,8 +10,9 @@ import {
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarHeader, SidebarFooter, SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { mockUser } from "@/data/mock";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+const defaultUser = { name: "Usuário", email: "usuario@email.com" };
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -94,7 +95,7 @@ function MenuGroup({ label, items, defaultOpen = false }: { label: string; items
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const initials = getInitials(mockUser.name);
+  const initials = getInitials(defaultUser.name);
   const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
@@ -137,8 +138,8 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate leading-tight">{mockUser.name.split(" ")[0]}</p>
-            <p className="text-[11px] text-sidebar-foreground/45 truncate">{mockUser.email}</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate leading-tight">{defaultUser.name.split(" ")[0]}</p>
+            <p className="text-[11px] text-sidebar-foreground/45 truncate">{defaultUser.email}</p>
           </div>
           <div className="flex gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
             <Tooltip>
