@@ -13,6 +13,7 @@ import NewBudget from "@/pages/NewBudget";
 import Budgets from "@/pages/Budgets";
 import Financial from "@/pages/Financial";
 import Expenses from "@/pages/Expenses";
+import Reports from "@/pages/Reports";
 import SettingsPage from "@/pages/Settings";
 import Backup from "@/pages/Backup";
 import Profile from "@/pages/Profile";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/orcamentos" element={<Budgets />} />
               <Route path="/financeiro" element={<Financial />} />
               <Route path="/despesas" element={<Expenses />} />
+              <Route path="/relatorios" element={<Reports />} />
               <Route path="/configuracoes" element={<SettingsPage />} />
               <Route path="/backup" element={<Backup />} />
               <Route path="/perfil" element={<Profile />} />

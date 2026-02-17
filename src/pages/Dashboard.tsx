@@ -14,14 +14,28 @@ import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 
-const chartData = [
-  { month: "Set", receitas: 3200, despesas: 1800 },
-  { month: "Out", receitas: 5100, despesas: 2400 },
-  { month: "Nov", receitas: 4300, despesas: 3100 },
-  { month: "Dez", receitas: 6700, despesas: 2800 },
-  { month: "Jan", receitas: 4500, despesas: 3300 },
-  { month: "Fev", receitas: 7200, despesas: 3500 },
-];
+function computeChartData() {
+  const months: Record<string, { receitas: number; despesas: number }> = {};
+  mockPayments.forEach(p => {
+    const key = p.date.slice(0, 7);
+    if (!months[key]) months[key] = { receitas: 0, despesas: 0 };
+    months[key].receitas += p.amount;
+  });
+  mockExpenses.forEach(e => {
+    const key = e.date.slice(0, 7);
+    if (!months[key]) months[key] = { receitas: 0, despesas: 0 };
+    months[key].despesas += e.amount;
+  });
+  const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return Object.entries(months)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, val]) => {
+      const m = parseInt(key.split("-")[1]) - 1;
+      return { month: monthNames[m], ...val };
+    });
+}
+
+const chartData = computeChartData();
 
 function getGreeting(): string {
   const h = new Date().getHours();
