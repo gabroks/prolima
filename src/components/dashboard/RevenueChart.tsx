@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { formatCurrency } from "@/lib/formatters";
 import { BarChart3 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
@@ -31,13 +31,28 @@ export function RevenueChart({ payments, expenses }: RevenueChartProps) {
       .map(([key, val]) => ({
         month: MONTH_NAMES[parseInt(key.split("-")[1]) - 1],
         ...val,
+        saldo: val.receitas - val.despesas,
       }));
   }, [payments, expenses]);
 
+  const totals = useMemo(() => {
+    const r = chartData.reduce((s, d) => s + d.receitas, 0);
+    const d = chartData.reduce((s, d) => s + d.despesas, 0);
+    return { receitas: r, despesas: d };
+  }, [chartData]);
+
   return (
     <Card className="lg:col-span-2 animate-slide-up" style={{ animationDelay: "460ms", animationFillMode: "backwards" }}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">Receitas vs Despesas — Últimos Meses</CardTitle>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle className="text-sm font-semibold">Receitas vs Despesas — Últimos Meses</CardTitle>
+          {chartData.length > 0 && (
+            <div className="flex gap-4 text-[11px]">
+              <span className="text-muted-foreground">Total: <span className="font-semibold text-primary">{formatCurrency(totals.receitas)}</span></span>
+              <span className="text-muted-foreground">Despesas: <span className="font-semibold text-destructive">{formatCurrency(totals.despesas)}</span></span>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (
@@ -51,17 +66,26 @@ export function RevenueChart({ payments, expenses }: RevenueChartProps) {
             <BarChart data={chartData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={40} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
               <Tooltip
                 formatter={(v: number, name: string) => [formatCurrency(v), name]}
+                labelFormatter={(label) => `Mês: ${label}`}
                 contentStyle={{
                   borderRadius: "var(--radius)",
                   border: "1px solid hsl(var(--border))",
                   boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
                   fontSize: "12px",
                   backgroundColor: "hsl(var(--card))",
+                  color: "hsl(var(--foreground))",
                 }}
                 cursor={{ fill: "hsl(var(--muted))", radius: 4 }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={28}
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => <span style={{ fontSize: "11px", color: "hsl(var(--muted-foreground))" }}>{value}</span>}
               />
               <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={40} />
               <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} maxBarSize={40} opacity={0.85} />
