@@ -28,16 +28,10 @@ interface BackupEntry {
   type: "cloud" | "local";
 }
 
-const mockBackups: BackupEntry[] = [
-  { id: "1", name: "Backup Fevereiro 2025", description: "Backup mensal completo", date: "2025-02-01", size: "2.4 MB", type: "cloud" },
-  { id: "2", name: "Backup Janeiro 2025", date: "2025-01-15", size: "1.8 MB", type: "cloud" },
-  { id: "3", name: "Backup Dezembro 2024", description: "Backup de fim de ano", date: "2024-12-28", size: "1.5 MB", type: "local" },
-];
-
 export default function Backup() {
   const [backupName, setBackupName] = useState("");
   const [backupDescription, setBackupDescription] = useState("");
-  const [backups, setBackups] = useState<BackupEntry[]>(mockBackups);
+  const [backups, setBackups] = useState<BackupEntry[]>([]);
   const [autoBackup, setAutoBackup] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoreDialog, setRestoreDialog] = useState(false);
