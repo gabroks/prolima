@@ -32,6 +32,7 @@ export interface Supplier {
 export interface Material {
   id: string;
   name: string;
+  category: string;
   chargeUnit: string;
   measureUnit: string;
   basePrice: number;
