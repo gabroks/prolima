@@ -47,13 +47,13 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
       <Card className="animate-slide-up" style={{ animationDelay: "310ms", animationFillMode: "backwards" }}>
         <CardContent className="p-5">
           <p className="text-xs text-muted-foreground font-medium mb-2">Ticket Médio</p>
-          <div className="flex items-end gap-2 mb-3">
+          <div className="flex items-end gap-2 mb-1">
             <span className="text-3xl font-bold tracking-tight tabular-nums">
               {formatCurrency(ticketMedio)}
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">
-            Baseado em {budgetsWithValue.length} orçamento{budgetsWithValue.length !== 1 && "s"}
+            Baseado em {budgetsWithValue.length} orçamento{budgetsWithValue.length !== 1 && "s"} com valor
           </p>
         </CardContent>
       </Card>

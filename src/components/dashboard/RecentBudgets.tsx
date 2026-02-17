@@ -30,30 +30,38 @@ export function RecentBudgets({ budgets }: RecentBudgetsProps) {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="divide-y">
-          {recentBudgets.map((b) => {
-            const st = budgetStatusConfig[b.status as BudgetStatus];
-            return (
-              <div
-                key={b.id}
-                className="flex items-center justify-between py-3 first:pt-0 last:pb-0 hover:bg-muted/30 -mx-2 px-2 rounded transition-colors cursor-pointer"
-                onClick={() => navigate("/orcamentos")}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{b.number}</span>
-                    <Badge variant={st.variant} className="text-[10px] px-1.5 h-5">{st.label}</Badge>
+        {recentBudgets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <Clock className="h-8 w-8 mb-2 opacity-20" />
+            <p className="text-sm font-medium">Nenhum orçamento ainda</p>
+            <p className="text-xs mt-0.5">Crie seu primeiro orçamento para vê-lo aqui</p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {recentBudgets.map((b) => {
+              const st = budgetStatusConfig[b.status as BudgetStatus];
+              return (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0 hover:bg-muted/30 -mx-2 px-2 rounded transition-colors cursor-pointer"
+                  onClick={() => navigate("/orcamentos")}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{b.number}</span>
+                      <Badge variant={st.variant} className="text-[10px] px-1.5 h-5">{st.label}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{b.client_name}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{b.client_name}</p>
+                  <div className="text-right ml-4 shrink-0">
+                    <p className="text-sm font-semibold tabular-nums">{formatCurrency(Number(b.total))}</p>
+                    <p className="text-[10px] text-muted-foreground tabular-nums">{formatDate(b.created_at)}</p>
+                  </div>
                 </div>
-                <div className="text-right ml-4 shrink-0">
-                  <p className="text-sm font-semibold tabular-nums">{formatCurrency(Number(b.total))}</p>
-                  <p className="text-[10px] text-muted-foreground tabular-nums">{formatDate(b.created_at)}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

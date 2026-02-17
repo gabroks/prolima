@@ -6,6 +6,21 @@ export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString("pt-BR");
 }
 
+export function formatRelativeDate(date: string): string {
+  const now = new Date();
+  const d = new Date(date);
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "agora";
+  if (diffMin < 60) return `${diffMin}min atrás`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h atrás`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return "ontem";
+  if (diffD < 7) return `${diffD} dias atrás`;
+  return formatDate(date);
+}
+
 export function getInitials(name: string, max = 2): string {
   return name.split(" ").map(n => n[0]).join("").slice(0, max).toUpperCase();
 }
