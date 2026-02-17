@@ -3,11 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Shield, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const { user, signIn, signUp } = useAuth();
@@ -17,6 +18,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) { toast.error("Informe seu e-mail"); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast.success("E-mail de recuperação enviado!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar e-mail");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // If already logged in, redirect
   if (user) return <Navigate to="/" replace />;
@@ -124,7 +146,7 @@ export default function Login() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
                     {!isSignUp && (
-                      <button type="button" className="text-xs text-primary hover:underline font-medium">
+                      <button type="button" onClick={() => { setForgotMode(true); setResetEmail(email); }} className="text-xs text-primary hover:underline font-medium">
                         Esqueceu a senha?
                       </button>
                     )}
@@ -171,6 +193,43 @@ export default function Login() {
           </p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {forgotMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
+          <Card className="w-full max-w-sm shadow-2xl border-0">
+            <CardContent className="pt-6 space-y-5">
+              {resetSent ? (
+                <div className="text-center space-y-3 py-4">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold">E-mail enviado!</h3>
+                  <p className="text-sm text-muted-foreground">Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.</p>
+                  <Button variant="outline" className="w-full" onClick={() => { setForgotMode(false); setResetSent(false); }}>Voltar ao Login</Button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold">Recuperar senha</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Informe seu e-mail para receber o link de recuperação.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>E-mail</Label>
+                    <Input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="seu@email.com" className="h-11" autoFocus />
+                  </div>
+                  <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
+                    {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando…</> : "Enviar link de recuperação"}
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setForgotMode(false)}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />Voltar ao login
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
