@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertCircle, TrendingUp, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/formatters";
 import { budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
@@ -30,33 +31,49 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-      <Card className="animate-slide-up" style={{ animationDelay: "250ms", animationFillMode: "backwards" }}>
-        <CardContent className="p-5">
-          <p className="text-xs text-muted-foreground font-medium mb-2">Taxa de Conversão</p>
-          <div className="flex items-end gap-2 mb-3">
-            <span className="text-3xl font-bold tracking-tight">{conversionRate}%</span>
-            <span className="text-xs text-muted-foreground mb-1">aprovados</span>
-          </div>
-          <Progress value={conversionRate} className="h-2" />
-          <p className="text-[11px] text-muted-foreground mt-2">
-            {approvedBudgets.length} de {issuedOrBeyond.length} orçamentos emitidos
-          </p>
-        </CardContent>
-      </Card>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Card className="animate-slide-up" style={{ animationDelay: "250ms", animationFillMode: "backwards" }}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground font-medium">Taxa de Conversão</p>
+                <Target className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex items-end gap-2 mb-3">
+                <span className="text-3xl font-bold tracking-tight tabular-nums">{conversionRate}%</span>
+                <span className="text-xs text-muted-foreground mb-1">aprovados</span>
+              </div>
+              <Progress value={conversionRate} className="h-2" />
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {approvedBudgets.length} de {issuedOrBeyond.length} orçamentos emitidos
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        <TooltipContent className="text-xs">Percentual de orçamentos emitidos que foram aprovados</TooltipContent>
+      </Tooltip>
 
-      <Card className="animate-slide-up" style={{ animationDelay: "310ms", animationFillMode: "backwards" }}>
-        <CardContent className="p-5">
-          <p className="text-xs text-muted-foreground font-medium mb-2">Ticket Médio</p>
-          <div className="flex items-end gap-2 mb-1">
-            <span className="text-3xl font-bold tracking-tight tabular-nums">
-              {formatCurrency(ticketMedio)}
-            </span>
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Baseado em {budgetsWithValue.length} orçamento{budgetsWithValue.length !== 1 && "s"} com valor
-          </p>
-        </CardContent>
-      </Card>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Card className="animate-slide-up" style={{ animationDelay: "310ms", animationFillMode: "backwards" }}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground font-medium">Ticket Médio</p>
+                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-3xl font-bold tracking-tight tabular-nums">
+                  {formatCurrency(ticketMedio)}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Baseado em {budgetsWithValue.length} orçamento{budgetsWithValue.length !== 1 && "s"} com valor
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        <TooltipContent className="text-xs">Valor médio por orçamento (apenas com valor &gt; 0)</TooltipContent>
+      </Tooltip>
 
       <Card className="animate-slide-up sm:col-span-2 lg:col-span-1" style={{ animationDelay: "370ms", animationFillMode: "backwards" }}>
         <CardContent className="p-5">

@@ -63,17 +63,23 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
+      <div className="space-y-6" role="status" aria-label="Carregando dashboard">
+        <div className="flex items-center justify-between">
+          <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-64 mt-2" /></div>
+          <div className="hidden sm:flex gap-2">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-9 w-28" />)}</div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[120px] rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[140px] rounded-xl" />)}
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64 lg:col-span-2" />
+          <Skeleton className="h-[320px] rounded-xl" />
+          <Skeleton className="h-[320px] lg:col-span-2 rounded-xl" />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[280px] rounded-xl" />)}
         </div>
       </div>
     );
@@ -91,7 +97,7 @@ export default function Dashboard() {
             {pendingBudgets.length > 0 ? (
               <>Você tem <span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}orçamento{pendingBudgets.length !== 1 && "s"} pendente{pendingBudgets.length !== 1 && "s"}</>
             ) : (
-              "Tudo em dia — nenhuma pendência no momento"
+              "Tudo em dia — nenhuma pendência no momento 🎉"
             )}
           </p>
         </div>
