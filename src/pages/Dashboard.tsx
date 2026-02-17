@@ -1,8 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { mockClients, mockMaterials, mockBudgets, mockPayments, mockExpenses } from "@/data/mock";
-import { Users, Package, FileText, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  Users, Package, FileText, DollarSign, TrendingUp, TrendingDown,
+  ArrowUpRight, ArrowDownRight, FilePlus, Clock, CheckCircle2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 const chartData = [
   { month: "Set", receitas: 3200, despesas: 1800 },
@@ -13,129 +19,250 @@ const chartData = [
   { month: "Fev", receitas: 7200, despesas: 3500 },
 ];
 
+const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+const statusMap: Record<string, { label: string; color: string; bg: string }> = {
+  draft: { label: "Rascunho", color: "text-muted-foreground", bg: "bg-muted-foreground" },
+  issued: { label: "Emitido", color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]" },
+  approved: { label: "Aprovado", color: "text-primary", bg: "bg-primary" },
+  rejected: { label: "Rejeitado", color: "text-destructive", bg: "bg-destructive" },
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
+
   const totalReceitas = mockPayments.reduce((s, p) => s + p.amount, 0);
   const totalDespesas = mockExpenses.reduce((s, e) => s + e.amount, 0);
   const saldo = totalReceitas - totalDespesas;
-  const budgetsThisMonth = mockBudgets.filter(b => b.status !== "draft").length;
+
+  const approvedBudgets = mockBudgets.filter(b => b.status === "approved");
+  const totalApproved = approvedBudgets.reduce((s, b) => s + b.total, 0);
+  const issuedCount = mockBudgets.filter(b => b.status !== "draft").length;
   const totalBudgetValue = mockBudgets.filter(b => b.status !== "draft").reduce((s, b) => s + b.total, 0);
 
+  const recentBudgets = [...mockBudgets].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+
   const summaryCards = [
-    { title: "Clientes", value: mockClients.length, icon: Users, color: "text-primary", onClick: () => navigate("/clientes") },
-    { title: "Materiais", value: mockMaterials.length, icon: Package, color: "text-info", onClick: () => navigate("/materiais") },
-    { title: "Orçamentos", value: mockBudgets.length, icon: FileText, color: "text-warning", onClick: () => navigate("/orcamentos") },
-    { title: "Saldo", value: `R$ ${saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: saldo >= 0 ? "text-primary" : "text-destructive", onClick: () => navigate("/financeiro") },
+    {
+      title: "Clientes Cadastrados",
+      value: mockClients.length,
+      subtitle: `${mockClients.filter(c => c.status === "active").length} ativos`,
+      icon: Users,
+      trend: "+2 este mês",
+      trendUp: true,
+      onClick: () => navigate("/clientes"),
+    },
+    {
+      title: "Materiais Disponíveis",
+      value: mockMaterials.length,
+      subtitle: "itens no catálogo",
+      icon: Package,
+      trend: null,
+      trendUp: true,
+      onClick: () => navigate("/materiais"),
+    },
+    {
+      title: "Orçamentos",
+      value: mockBudgets.length,
+      subtitle: `${approvedBudgets.length} aprovados`,
+      icon: FileText,
+      trend: `${issuedCount} emitidos`,
+      trendUp: true,
+      onClick: () => navigate("/orcamentos"),
+    },
+    {
+      title: "Saldo Atual",
+      value: fmt(saldo),
+      subtitle: saldo >= 0 ? "Positivo" : "Negativo",
+      icon: DollarSign,
+      trend: saldo >= 0 ? "Saudável" : "Atenção",
+      trendUp: saldo >= 0,
+      onClick: () => navigate("/financeiro"),
+    },
   ];
 
-  const statusCounts = {
-    draft: mockBudgets.filter(b => b.status === "draft").length,
-    issued: mockBudgets.filter(b => b.status === "issued").length,
-    approved: mockBudgets.filter(b => b.status === "approved").length,
-    rejected: mockBudgets.filter(b => b.status === "rejected").length,
-  };
-  const statusTotal = Math.max(mockBudgets.length, 1);
+  const statusCounts = Object.entries(statusMap).map(([key, config]) => ({
+    key,
+    ...config,
+    count: mockBudgets.filter(b => b.status === key).length,
+  }));
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Dashboard</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Visão geral do seu negócio</p>
+        </div>
+        <Button onClick={() => navigate("/novo-orcamento")} className="shadow-md shadow-primary/20">
+          <FilePlus className="h-4 w-4 mr-2" />
+          Novo Orçamento
+        </Button>
+      </div>
 
+      {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {summaryCards.map((card) => (
-          <Card key={card.title} className="cursor-pointer hover:shadow-md transition-shadow" onClick={card.onClick}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
+        {summaryCards.map((card, i) => (
+          <Card
+            key={card.title}
+            className="cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            onClick={card.onClick}
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <card.icon className="h-4.5 w-4.5" />
+                </div>
+                {card.trend && (
+                  <div className={`flex items-center gap-1 text-xs font-medium ${card.trendUp ? "text-primary" : "text-destructive"}`}>
+                    {card.trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    <span>{card.trend}</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-2xl font-bold tracking-tight">{card.value}</div>
+              <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Receitas e Despesas</CardTitle>
+      {/* Financial Summary + Performance */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Resumo Financeiro
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span className="text-sm">Total Receitas</span>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <span className="text-sm">Receitas</span>
+                </div>
+                <span className="text-sm font-semibold text-primary">{fmt(totalReceitas)}</span>
               </div>
-              <span className="font-semibold text-primary">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-destructive" />
+                  <span className="text-sm">Despesas</span>
+                </div>
+                <span className="text-sm font-semibold text-destructive">{fmt(totalDespesas)}</span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Saldo</span>
+                <span className={`text-sm font-bold ${saldo >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(saldo)}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" />
-                <span className="text-sm">Total Despesas</span>
+
+            <div className="pt-2 border-t space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Orçamentos aprovados</span>
+                <span className="font-medium text-foreground">{fmt(totalApproved)}</span>
               </div>
-              <span className="font-semibold text-destructive">R$ {totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Potencial de receita</span>
+                <span className="font-medium text-foreground">{fmt(totalBudgetValue)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Desempenho do Mês</CardTitle>
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Receitas vs Despesas — Últimos 6 Meses</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Orçamentos emitidos</span>
-              <span className="font-semibold">{budgetsThisMonth}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Potencial de receita</span>
-              <span className="font-semibold">R$ {totalBudgetValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-            </div>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={chartData} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(v: number, name: string) => [fmt(v), name]}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid hsl(var(--border))",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    fontSize: "12px",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} opacity={0.8} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Receitas vs Despesas (Últimos 6 Meses)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} />
-              <Legend />
-              <Bar dataKey="receitas" name="Receitas" fill="hsl(142, 64%, 32%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="despesas" name="Despesas" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Status + Recent */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Status dos Orçamentos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {statusCounts.map((s) => (
+              <div key={s.key} className="space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2.5 w-2.5 rounded-full ${s.bg}`} />
+                    <span className="font-medium">{s.label}</span>
+                  </div>
+                  <span className="font-semibold tabular-nums">{s.count}</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${s.bg} transition-all duration-500`}
+                    style={{ width: `${Math.max((s.count / Math.max(mockBudgets.length, 1)) * 100, 2)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Status dos Orçamentos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {([
-            { label: "Rascunho", count: statusCounts.draft, color: "bg-muted-foreground" },
-            { label: "Emitido", count: statusCounts.issued, color: "bg-[hsl(var(--info))]" },
-            { label: "Aprovado", count: statusCounts.approved, color: "bg-primary" },
-            { label: "Rejeitado", count: statusCounts.rejected, color: "bg-destructive" },
-          ]).map((s) => (
-            <div key={s.label} className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>{s.label}</span>
-                <span className="font-medium">{s.count}</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className={`h-full rounded-full ${s.color} transition-all`} style={{ width: `${(s.count / statusTotal) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              Orçamentos Recentes
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => navigate("/orcamentos")}>
+              Ver todos
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentBudgets.map((b) => {
+              const st = statusMap[b.status];
+              return (
+                <div key={b.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{b.number}</span>
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${st.color} border-current/20`}>
+                        {st.label}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{b.clientName}</p>
+                  </div>
+                  <div className="text-right ml-3">
+                    <p className="text-sm font-semibold tabular-nums">{fmt(b.total)}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(b.createdAt).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
