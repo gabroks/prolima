@@ -21,6 +21,7 @@ import { formatDate, formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
 
 type SortKey = "name" | "date-desc" | "date-asc" | "city";
+const PAGE_SIZE = 15;
 
 const emptyForm: ClientForm = { name: "", phone: "", personType: "fisica", document: "", status: "active" };
 
@@ -36,6 +37,7 @@ export default function Clients() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,6 +64,12 @@ export default function Clients() {
     }
     return result;
   }, [clients, search, statusFilter, typeFilter, sortBy]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
+
+  // Reset page when filters change
+  const resetPage = () => setPage(0);
 
   const activeCount = clients.filter(c => c.status === "active").length;
   const pjCount = clients.filter(c => c.person_type === "juridica").length;
@@ -90,12 +98,12 @@ export default function Clients() {
     if (!form.name) { toast.error("Informe o nome do cliente"); return; }
     if (!form.phone) { toast.error("Informe o telefone do cliente"); return; }
     if (!form.document) { toast.error("Informe o CPF/CNPJ do cliente"); return; }
+    const onSuccess = () => { setDialogOpen(false); setForm(emptyForm); setEditingId(null); };
     if (editingId) {
-      updateClient.mutate({ id: editingId, form });
+      updateClient.mutate({ id: editingId, form }, { onSuccess });
     } else {
-      createClient.mutate(form);
+      createClient.mutate(form, { onSuccess });
     }
-    setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
@@ -166,9 +174,9 @@ export default function Clients() {
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, telefone, documento, email, cidade…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Buscar por nome, telefone, documento, email, cidade…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
           <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -176,7 +184,7 @@ export default function Clients() {
             <SelectItem value="inactive">Inativos</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); resetPage(); }}>
           <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos tipos</SelectItem>
@@ -224,7 +232,7 @@ export default function Clients() {
                     )}
                   </TableCell>
                 </TableRow>
-              ) : filtered.map((c) => (
+              ) : paged.map((c) => (
                 <TableRow key={c.id} className="group cursor-pointer" onClick={() => navigate(`/clientes/${c.id}`)}>
                   <TableCell>
                     <div>
@@ -298,15 +306,24 @@ export default function Clients() {
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Exibindo {filtered.length} de {clients.length} clientes
-        {(statusFilter !== "all" || typeFilter !== "all") && (
-          <> • Filtros ativos: {[
-            statusFilter !== "all" && (statusFilter === "active" ? "Ativos" : "Inativos"),
-            typeFilter !== "all" && (typeFilter === "fisica" ? "PF" : "PJ"),
-          ].filter(Boolean).join(", ")}</>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-muted-foreground">
+          Exibindo {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} clientes
+          {(statusFilter !== "all" || typeFilter !== "all") && (
+            <> • Filtros ativos: {[
+              statusFilter !== "all" && (statusFilter === "active" ? "Ativos" : "Inativos"),
+              typeFilter !== "all" && (typeFilter === "fisica" ? "PF" : "PJ"),
+            ].filter(Boolean).join(", ")}</>
+          )}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+            <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
+          </div>
         )}
-      </p>
+      </div>
 
       {/* Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -389,7 +406,9 @@ export default function Clients() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteClient.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteClient.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
