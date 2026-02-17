@@ -106,7 +106,7 @@ export default function SettingsPage() {
           <h2 className="text-2xl font-bold">Configurações</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie as preferências do sistema e da empresa</p>
         </div>
-        <Button onClick={handleSave} disabled={!hasChanges} className="shadow-md shadow-primary/20">
+        <Button onClick={handleSave} disabled={!hasChanges || updateSettings.isPending} className="shadow-md shadow-primary/20">
           <Save className="h-4 w-4 mr-2" />Salvar Alterações
           {hasChanges && <Badge className="ml-2 h-5 px-1.5 bg-primary-foreground text-primary text-[10px]">Pendente</Badge>}
         </Button>
