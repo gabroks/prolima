@@ -21,6 +21,7 @@ import { PaymentFormDialog } from "@/components/financial/PaymentFormDialog";
 
 const PAYMENT_METHODS = ["PIX", "Dinheiro", "Cartão", "Boleto", "Transferência"];
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+const PAGE_SIZE = 15;
 
 export default function Financial() {
   const { data: budgets = [], isLoading: lb } = useBudgets();
@@ -34,6 +35,7 @@ export default function Financial() {
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("date-desc");
+  const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -75,6 +77,10 @@ export default function Financial() {
     return result;
   }, [payments, search, methodFilter, sortBy]);
 
+  const totalPages = Math.ceil(filteredPayments.length / PAGE_SIZE);
+  const pagedPayments = useMemo(() => filteredPayments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filteredPayments, page]);
+  const resetPage = () => setPage(0);
+
   const filteredBudgets = useMemo(() => {
     const q = search.toLowerCase();
     return approvedBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q));
@@ -87,11 +93,11 @@ export default function Financial() {
     if (!form.budgetId || !form.amount || form.amount <= 0) { toast.error("Selecione um orçamento e informe o valor"); return; }
     const budget = approvedBudgets.find(b => b.id === form.budgetId);
     const fullForm: PaymentForm = { budgetId: form.budgetId!, budgetNumber: budget?.number || form.budgetNumber || "", clientName: budget?.client_name || form.clientName || "", amount: form.amount!, method: form.method || "PIX", date: form.date || new Date().toISOString().split("T")[0], notes: form.notes };
-    if (editingId) { updatePayment.mutate({ id: editingId, form: fullForm }); } else { createPayment.mutate(fullForm); }
-    setDialogOpen(false); setForm({ method: "PIX" }); setEditingId(null);
+    const onSuccess = () => { setDialogOpen(false); setForm({ method: "PIX" }); setEditingId(null); };
+    if (editingId) { updatePayment.mutate({ id: editingId, form: fullForm }, { onSuccess }); } else { createPayment.mutate(fullForm, { onSuccess }); }
   };
 
-  const handleDelete = () => { if (!deleteId) return; deletePaymentMut.mutate(deleteId); setDeleteId(null); };
+  const handleDelete = () => { if (!deleteId) return; deletePaymentMut.mutate(deleteId, { onSuccess: () => setDeleteId(null) }); };
   const methodBadgeVariant = (m: string) => { switch (m) { case "PIX": return "default" as const; case "Cartão": return "outline" as const; default: return "secondary" as const; } };
 
   if (lb || lp) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
@@ -107,15 +113,15 @@ export default function Financial() {
       <FinancialCharts totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} receivedPct={receivedPct} methodBreakdown={methodBreakdown} monthlyRevenue={monthlyRevenue} />
 
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por cliente ou número…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" /></div>
-        <Select value={methodFilter} onValueChange={setMethodFilter}><SelectTrigger className="w-[140px]"><SelectValue placeholder="Método" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select>
+        <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por cliente ou número…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" /></div>
+        <Select value={methodFilter} onValueChange={(v) => { setMethodFilter(v); resetPage(); }}><SelectTrigger className="w-[140px]"><SelectValue placeholder="Método" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}><SelectTrigger className="w-[160px]"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="date-desc">Mais recente</SelectItem><SelectItem value="date-asc">Mais antigo</SelectItem><SelectItem value="amount-desc">Maior valor</SelectItem><SelectItem value="amount-asc">Menor valor</SelectItem></SelectContent></Select>
       </div>
 
       <Tabs defaultValue="payments" className="space-y-4">
         <TabsList><TabsTrigger value="payments">Pagamentos ({payments.length})</TabsTrigger><TabsTrigger value="budgets">Orçamentos Aprovados ({approvedBudgets.length})</TabsTrigger></TabsList>
         <TabsContent value="payments"><Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Orçamento</TableHead><TableHead className="hidden md:table-cell">Cliente</TableHead><TableHead>Valor</TableHead><TableHead className="hidden sm:table-cell">Método</TableHead><TableHead className="hidden md:table-cell">Data</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
-          {filteredPayments.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground"><CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" /><p>Nenhum pagamento</p></TableCell></TableRow> : filteredPayments.map(p => (
+          {filteredPayments.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground"><CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" /><p>Nenhum pagamento</p></TableCell></TableRow> : pagedPayments.map(p => (
             <TableRow key={p.id} className="group"><TableCell><div><p className="font-medium font-mono text-xs">{p.budget_number}</p><p className="text-xs text-muted-foreground md:hidden">{p.client_name}</p></div></TableCell><TableCell className="hidden md:table-cell">{p.client_name}</TableCell><TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(Number(p.amount))}</TableCell><TableCell className="hidden sm:table-cell"><Badge variant={methodBadgeVariant(p.method)}>{p.method}</Badge></TableCell><TableCell className="hidden md:table-cell">{formatDate(p.date)}</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>
           ))}
         </TableBody></Table></CardContent></Card></TabsContent>
@@ -129,9 +135,20 @@ export default function Financial() {
         </TableBody></Table></CardContent></Card></TabsContent>
       </Tabs>
 
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-xs text-muted-foreground">Exibindo {filteredPayments.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filteredPayments.length)} de {filteredPayments.length} pagamentos</span>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+            <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
+          </div>
+        )}
+      </div>
+
       <PaymentFormDialog open={dialogOpen} onOpenChange={setDialogOpen} form={form} setForm={setForm} onSave={handleSave} editingId={editingId} approvedBudgets={approvedBudgets} isSaving={createPayment.isPending || updatePayment.isPending} />
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir pagamento?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir pagamento?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} disabled={deletePaymentMut.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deletePaymentMut.isPending ? "Excluindo…" : "Excluir"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }
