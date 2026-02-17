@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const defaultUser = { name: "Usuário", email: "usuario@email.com" };
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getInitials } from "@/lib/formatters";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MenuItem {
   title: string;
@@ -95,8 +96,16 @@ function MenuGroup({ label, items, defaultOpen = false }: { label: string; items
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const initials = getInitials(defaultUser.name);
+  const { user, signOut } = useAuth();
+  const displayName = user?.email?.split("@")[0] || "Usuário";
+  const displayEmail = user?.email || "usuario@email.com";
+  const initials = getInitials(displayName);
   const { theme, setTheme } = useTheme();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
@@ -138,8 +147,8 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate leading-tight">{defaultUser.name.split(" ")[0]}</p>
-            <p className="text-[11px] text-sidebar-foreground/45 truncate">{defaultUser.email}</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate leading-tight">{displayName}</p>
+            <p className="text-[11px] text-sidebar-foreground/45 truncate">{displayEmail}</p>
           </div>
           <div className="flex gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
             <Tooltip>
@@ -212,7 +221,7 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <button
                 className="w-full text-sidebar-foreground/50 hover:text-destructive transition-colors"
-                onClick={() => navigate("/login")}
+                onClick={handleLogout}
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sair do Sistema</span>
