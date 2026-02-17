@@ -179,11 +179,6 @@ export function AppSidebar() {
           </div>
         </div>
 
-        <div className="mt-2.5">
-          <Badge variant="outline" className="text-[10px] border-sidebar-primary/25 text-sidebar-primary bg-sidebar-primary/8 font-medium px-2 py-0.5">
-            7 dias restantes — Teste gratuito
-          </Badge>
-        </div>
       </SidebarHeader>
 
       <SidebarSeparator />
