@@ -16,11 +16,11 @@ import { mockBudgets, mockPayments, mockExpenses } from "@/data/mock";
 import { Payment } from "@/types";
 import {
   DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Search, Pencil, Trash2,
-  CreditCard, ArrowUpDown, CheckCircle2, AlertCircle, PieChart,
+  CreditCard, ArrowUpDown, CheckCircle2, AlertCircle, PieChart, CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const PAYMENT_METHODS = ["PIX", "Dinheiro", "Cartão", "Boleto", "Transferência"];
 
@@ -59,6 +59,22 @@ export default function Financial() {
     const map: Record<string, number> = {};
     payments.forEach(p => { map[p.method] = (map[p.method] || 0) + p.amount; });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [payments]);
+
+  // Monthly revenue trend
+  const monthlyRevenue = useMemo(() => {
+    const months: Record<string, number> = {};
+    payments.forEach(p => {
+      const key = p.date.slice(0, 7);
+      months[key] = (months[key] || 0) + p.amount;
+    });
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    return Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, total]) => {
+        const m = parseInt(key.split("-")[1]) - 1;
+        return { month: monthNames[m], total };
+      });
   }, [payments]);
 
   const filteredPayments = useMemo(() => {
@@ -219,7 +235,25 @@ export default function Financial() {
         </Card>
       </div>
 
-      {/* Search + Filters */}
+      {/* Monthly Revenue Trend */}
+      {monthlyRevenue.length > 1 && (
+        <Card className="p-5">
+          <p className="text-sm font-semibold flex items-center gap-2 mb-4">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            Evolução Mensal de Receitas
+          </p>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={monthlyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => [formatCurrency(v), "Receitas"]} contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }} />
+              <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.1} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
