@@ -131,3 +131,75 @@ export function useUpdateBudgetStatus() {
     onError: () => toast.error("Erro ao alterar status"),
   });
 }
+
+export function useDeleteBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Delete items first, then budget
+      const { error: itemsErr } = await supabase.from("budget_items").delete().eq("budget_id", id);
+      if (itemsErr) throw itemsErr;
+      const { error } = await supabase.from("budgets").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      toast.success("Orçamento excluído!");
+    },
+    onError: () => toast.error("Erro ao excluir orçamento"),
+  });
+}
+
+export function useDuplicateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ budget, newNumber }: { budget: BudgetWithItems; newNumber: string }) => {
+      const { data: newBudget, error: budgetError } = await supabase
+        .from("budgets")
+        .insert({
+          number: newNumber,
+          client_id: budget.client_id,
+          client_name: budget.client_name,
+          validity_date: budget.validity_date,
+          delivery_date: budget.delivery_date,
+          service_description: budget.service_description,
+          discount_type: budget.discount_type,
+          discount_value: budget.discount_value,
+          freight: budget.freight,
+          other_costs: budget.other_costs,
+          payment_terms: budget.payment_terms,
+          general_notes: budget.general_notes,
+          subtotal: budget.subtotal,
+          total_discount: budget.total_discount,
+          total: budget.total,
+          status: "draft",
+        })
+        .select()
+        .single();
+      if (budgetError) throw budgetError;
+
+      if (budget.budget_items && budget.budget_items.length > 0) {
+        const items = budget.budget_items.map(item => ({
+          budget_id: newBudget.id,
+          material_id: item.material_id,
+          material_name: item.material_name,
+          unit: item.unit,
+          width: item.width,
+          height: item.height,
+          qty: item.qty,
+          unit_price: item.unit_price,
+          notes: item.notes,
+          total: item.total,
+        }));
+        const { error: itemsError } = await supabase.from("budget_items").insert(items);
+        if (itemsError) throw itemsError;
+      }
+      return newBudget;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      toast.success("Orçamento duplicado como rascunho!");
+    },
+    onError: () => toast.error("Erro ao duplicar orçamento"),
+  });
+}
