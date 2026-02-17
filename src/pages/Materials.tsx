@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { mockMaterials } from "@/data/mock";
+import { mockMaterials, mockBudgets } from "@/data/mock";
 import { Material } from "@/types";
 import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, Tag, DollarSign, Layers } from "lucide-react";
 import { toast } from "sonner";
@@ -56,6 +56,15 @@ export default function Materials() {
 
   const avgPrice = materials.length > 0 ? materials.reduce((s, m) => s + m.basePrice, 0) / materials.length : 0;
   const maxPrice = materials.length > 0 ? Math.max(...materials.map(m => m.basePrice)) : 0;
+
+  // Usage count per material across all budgets
+  const materialUsage = useMemo(() => {
+    const map: Record<string, number> = {};
+    mockBudgets.forEach(b => b.items.forEach(item => {
+      map[item.materialId] = (map[item.materialId] || 0) + 1;
+    }));
+    return map;
+  }, []);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (m: Material) => { setEditingId(m.id); setForm({ ...m }); setDialogOpen(true); };
@@ -159,6 +168,7 @@ export default function Materials() {
                 <TableHead className="hidden sm:table-cell">Categoria</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead className="hidden md:table-cell">Medida</TableHead>
+                <TableHead className="hidden sm:table-cell">Uso</TableHead>
                 <TableHead>Preço Base</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -166,7 +176,7 @@ export default function Materials() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || categoryFilter !== "all" ? "Nenhum material encontrado" : "Nenhum material cadastrado"}</p>
                     {!search && categoryFilter === "all" && (
@@ -190,6 +200,13 @@ export default function Materials() {
                   </TableCell>
                   <TableCell className="text-sm">{m.chargeUnit}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm">{m.measureUnit}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {materialUsage[m.id] ? (
+                      <Badge variant="outline" className="text-[10px] h-5 px-1.5 tabular-nums">{materialUsage[m.id]} orç.</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(m.basePrice)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

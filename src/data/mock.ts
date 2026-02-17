@@ -4,11 +4,18 @@ export const mockClients: Client[] = [
   { id: "1", name: "João Silva", phone: "(11) 99999-0001", personType: "fisica", document: "123.456.789-00", email: "joao@email.com", neighborhood: "Centro", city: "São Paulo", address: "Rua A, 100", status: "active", createdAt: "2025-01-15" },
   { id: "2", name: "Construtora ABC Ltda", phone: "(11) 3333-4444", personType: "juridica", document: "12.345.678/0001-00", razaoSocial: "Construtora ABC Ltda", nomeFantasia: "ABC Construções", email: "contato@abc.com", neighborhood: "Industrial", city: "São Paulo", address: "Av. B, 200", status: "active", createdAt: "2025-02-01" },
   { id: "3", name: "Maria Oliveira", phone: "(21) 98888-1234", personType: "fisica", document: "987.654.321-00", email: "maria@email.com", city: "Rio de Janeiro", status: "inactive", createdAt: "2024-12-10" },
+  { id: "4", name: "Roberto Almeida", phone: "(11) 97777-5678", personType: "fisica", document: "456.789.012-00", email: "roberto@email.com", neighborhood: "Vila Mariana", city: "São Paulo", address: "Rua C, 350", status: "active", createdAt: "2025-01-28" },
+  { id: "5", name: "Engenharia Delta Ltda", phone: "(11) 4444-5555", personType: "juridica", document: "33.444.555/0001-66", razaoSocial: "Engenharia Delta Ltda", nomeFantasia: "Delta Engenharia", email: "comercial@delta.com", neighborhood: "Pinheiros", city: "São Paulo", address: "Av. D, 800", status: "active", createdAt: "2024-11-20" },
+  { id: "6", name: "Ana Costa", phone: "(21) 96666-4321", personType: "fisica", document: "654.321.098-00", email: "ana.costa@email.com", city: "Rio de Janeiro", neighborhood: "Copacabana", status: "active", createdAt: "2025-03-01" },
+  { id: "7", name: "Vidraçaria Luz Ltda", phone: "(19) 3222-1111", personType: "juridica", document: "55.666.777/0001-88", razaoSocial: "Vidraçaria Luz Ltda", nomeFantasia: "Luz Vidros", email: "luz@vidros.com", city: "Campinas", status: "active", createdAt: "2025-02-15" },
 ];
 
 export const mockSuppliers: Supplier[] = [
   { id: "1", name: "Vidraçaria Premium", personType: "juridica", document: "11.222.333/0001-44", phone: "(11) 5555-1111", email: "vidros@premium.com", city: "São Paulo", active: true },
   { id: "2", name: "Alumínio Express", personType: "juridica", document: "22.333.444/0001-55", phone: "(11) 5555-2222", city: "Guarulhos", active: true },
+  { id: "3", name: "Ferragens Central", personType: "juridica", document: "33.444.555/0001-66", phone: "(11) 5555-3333", email: "contato@ferragenscentral.com", city: "São Paulo", neighborhood: "Brás", active: true },
+  { id: "4", name: "Silicone & Vedação", personType: "juridica", document: "44.555.666/0001-77", phone: "(19) 4444-1111", email: "vendas@siliconeveda.com", city: "Campinas", active: true },
+  { id: "5", name: "Transporte Rápido", personType: "fisica", document: "111.222.333-44", phone: "(11) 98888-0001", city: "São Paulo", active: false, notes: "Entregador autônomo" },
 ];
 
 export const mockMaterials: Material[] = [

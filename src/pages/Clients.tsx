@@ -10,14 +10,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { mockClients, mockBudgets } from "@/data/mock";
+import { mockClients, mockBudgets, mockPayments } from "@/data/mock";
 import { Client } from "@/types";
 import {
   Plus, Search, Pencil, Trash2, Users, UserCheck, UserX, Building2,
   ArrowUpDown, Phone, Mail, MapPin, MessageCircle, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/formatters";
+import { formatDate, formatCurrency } from "@/lib/formatters";
 
 type SortKey = "name" | "date-desc" | "date-asc" | "city";
 
@@ -65,6 +65,16 @@ export default function Clients() {
   const budgetCounts = useMemo(() => {
     const map: Record<string, number> = {};
     mockBudgets.forEach(b => { map[b.clientId] = (map[b.clientId] || 0) + 1; });
+    return map;
+  }, []);
+
+  // Revenue per client
+  const clientRevenue = useMemo(() => {
+    const map: Record<string, number> = {};
+    mockPayments.forEach(p => {
+      const budget = mockBudgets.find(b => b.id === p.budgetId);
+      if (budget) map[budget.clientId] = (map[budget.clientId] || 0) + p.amount;
+    });
     return map;
   }, []);
 
@@ -205,6 +215,7 @@ export default function Clients() {
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
                 <TableHead className="hidden lg:table-cell">Localização</TableHead>
                 <TableHead className="hidden sm:table-cell">Orçamentos</TableHead>
+                <TableHead className="hidden sm:table-cell">Receita</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -212,7 +223,7 @@ export default function Clients() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || statusFilter !== "all" || typeFilter !== "all" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</p>
                     {!search && statusFilter === "all" && typeFilter === "all" && (
@@ -263,6 +274,11 @@ export default function Clients() {
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <span className="text-sm font-semibold tabular-nums">{budgetCounts[c.id] || 0}</span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="text-sm font-semibold tabular-nums text-primary">
+                      {clientRevenue[c.id] ? formatCurrency(clientRevenue[c.id]) : "—"}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge
