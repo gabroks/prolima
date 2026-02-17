@@ -6,25 +6,57 @@ import { Label } from "@/components/ui/label";
 import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 export default function Login() {
+  const { user, signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // If already logged in, redirect
+  if (user) return <Navigate to="/" replace />;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("Preencha todos os campos");
       return;
     }
+    if (isSignUp && password.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
     setLoading(true);
-    // Simulate delay then redirect
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 800);
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Conta criada! Verifique seu e-mail para confirmar o cadastro.");
+          setIsSignUp(false);
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          if (error.message.includes("Invalid login")) {
+            toast.error("E-mail ou senha incorretos");
+          } else if (error.message.includes("Email not confirmed")) {
+            toast.error("Confirme seu e-mail antes de entrar");
+          } else {
+            toast.error(error.message);
+          }
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,13 +95,19 @@ export default function Login() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight">Bem-vindo de volta</h2>
-            <p className="text-sm text-muted-foreground mt-1">Entre com suas credenciais para acessar o sistema</p>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {isSignUp ? "Criar conta" : "Bem-vindo de volta"}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isSignUp
+                ? "Preencha seus dados para criar uma conta"
+                : "Entre com suas credenciais para acessar o sistema"}
+            </p>
           </div>
 
           <Card className="shadow-xl shadow-black/5 border-0">
             <CardContent className="pt-6">
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">E-mail</Label>
                   <Input
@@ -85,9 +123,11 @@ export default function Login() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                    <button type="button" className="text-xs text-primary hover:underline font-medium">
-                      Esqueceu a senha?
-                    </button>
+                    {!isSignUp && (
+                      <button type="button" className="text-xs text-primary hover:underline font-medium">
+                        Esqueceu a senha?
+                      </button>
+                    )}
                   </div>
                   <div className="relative">
                     <Input
@@ -96,7 +136,7 @@ export default function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-11 pr-10"
-                      autoComplete="current-password"
+                      autoComplete={isSignUp ? "new-password" : "current-password"}
                     />
                     <button
                       type="button"
@@ -107,20 +147,27 @@ export default function Login() {
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
-                  <Label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer">Lembrar de mim</Label>
-                </div>
+                {!isSignUp && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
+                    <Label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer">Lembrar de mim</Label>
+                  </div>
+                )}
                 <Button type="submit" className="w-full h-11 text-sm font-semibold shadow-md shadow-primary/20" disabled={loading}>
-                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Entrando…</> : "Entrar"}
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSignUp ? "Criando…" : "Entrando…"}</> : isSignUp ? "Criar conta" : "Entrar"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Não tem uma conta?{" "}
-            <button className="text-primary font-medium hover:underline">Criar conta</button>
+            {isSignUp ? "Já tem uma conta? " : "Não tem uma conta? "}
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-primary font-medium hover:underline"
+            >
+              {isSignUp ? "Fazer login" : "Criar conta"}
+            </button>
           </p>
         </div>
       </div>
