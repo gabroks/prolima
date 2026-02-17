@@ -105,7 +105,7 @@ export default function Budgets() {
         {[
           { label: "Total", value: counts.total, icon: FileText, color: "text-primary", sub: `${formatCurrency(totalValue)} total` },
           { label: "Aprovados", value: counts.approved, icon: CheckCircle, color: "text-primary", sub: formatCurrency(approvedValue) },
-          { label: "Pendentes", value: counts.issued + counts.draft, icon: Clock, color: "text-[hsl(var(--warning))]", sub: `${counts.issued} emitidos, ${counts.draft} rascunhos` },
+          { label: "Pendentes", value: counts.issued + counts.draft, icon: Clock, color: "text-warning", sub: `${counts.issued} emitidos, ${counts.draft} rascunhos` },
           { label: "Conversão", value: `${conversionRate}%`, icon: TrendingUp, color: "text-primary", sub: `${counts.approved} de ${counts.total}` },
         ].map(c => (
           <Card key={c.label} className="p-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><c.icon className={`h-5 w-5 ${c.color}`} /></div><div className="min-w-0"><p className="text-xs text-muted-foreground">{c.label}</p><p className="text-lg font-bold tabular-nums">{c.value}</p><p className="text-[10px] text-muted-foreground truncate">{c.sub}</p></div></div></Card>

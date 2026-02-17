@@ -96,6 +96,19 @@
     --sidebar-accent-foreground: 140 10% 92%;
     --sidebar-border: 160 10% 12%;
     --sidebar-ring: 152 58% 48%;
+
+    --success: 152 55% 35%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 45%;
+    --warning-foreground: 38 92% 14%;
+    --info: 215 70% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --chart-1: 152 58% 45%;
+    --chart-2: 0 62% 45%;
+    --chart-3: 215 70% 48%;
+    --chart-4: 38 85% 45%;
+    --chart-5: 280 55% 55%;
   }
 }
 

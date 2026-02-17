@@ -21,10 +21,10 @@ type NotifCategory = "all" | "budgets" | "payments" | "clients" | "alerts";
 
 const categoryConfig: Record<NotifCategory, { label: string; icon: React.ElementType; color: string }> = {
   all: { label: "Todas", icon: Inbox, color: "text-foreground" },
-  budgets: { label: "Orçamentos", icon: FileText, color: "text-[hsl(var(--info))]" },
+  budgets: { label: "Orçamentos", icon: FileText, color: "text-info" },
   payments: { label: "Pagamentos", icon: DollarSign, color: "text-primary" },
-  clients: { label: "Clientes", icon: Users, color: "text-[hsl(var(--chart-5))]" },
-  alerts: { label: "Alertas", icon: AlertTriangle, color: "text-[hsl(var(--warning))]" },
+  clients: { label: "Clientes", icon: Users, color: "text-chart-5" },
+  alerts: { label: "Alertas", icon: AlertTriangle, color: "text-warning" },
 };
 
 function guessCategory(message: string): NotifCategory {
