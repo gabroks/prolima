@@ -12,9 +12,12 @@ export const mockSuppliers: Supplier[] = [
 ];
 
 export const mockMaterials: Material[] = [
-  { id: "1", name: "Vidro Temperado 8mm", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 280.0 },
-  { id: "2", name: "Perfil de Alumínio", chargeUnit: "metro", measureUnit: "metro", basePrice: 45.0 },
-  { id: "3", name: "Espelho 4mm", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 180.0 },
+  { id: "1", name: "Vidro Temperado 8mm", category: "Vidros", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 280.0 },
+  { id: "2", name: "Perfil de Alumínio", category: "Alumínio", chargeUnit: "metro", measureUnit: "metro", basePrice: 45.0 },
+  { id: "3", name: "Espelho 4mm", category: "Espelhos", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 180.0 },
+  { id: "4", name: "Vidro Laminado 10mm", category: "Vidros", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 420.0 },
+  { id: "5", name: "Silicone Estrutural", category: "Acessórios", chargeUnit: "unidade", measureUnit: "unidade", basePrice: 35.0 },
+  { id: "6", name: "Ferragem Pivotante", category: "Acessórios", chargeUnit: "unidade", measureUnit: "unidade", basePrice: 150.0 },
 ];
 
 export const mockBudgets: Budget[] = [
