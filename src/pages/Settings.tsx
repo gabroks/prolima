@@ -15,6 +15,7 @@ import {
   Upload, Building2, Palette, QrCode, Save, Check,
   FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
 } from "lucide-react";
+import { FileUpload } from "@/components/settings/FileUpload";
 
 const colorOptions = [
   { name: "Verde", value: "green", hsl: "152 58% 36%" },
@@ -62,6 +63,8 @@ export default function SettingsPage() {
     state: dbSettings.state,
     cep: dbSettings.cep,
     themeColor: dbSettings.theme_color,
+    logo: dbSettings.logo || "",
+    pixQrCode: dbSettings.pix_qr_code || "",
   } : null);
 
   const update = (field: string, value: string) => {
@@ -86,6 +89,8 @@ export default function SettingsPage() {
         state: settings.state,
         cep: settings.cep,
         theme_color: settings.themeColor,
+        logo: settings.logo || null,
+        pix_qr_code: settings.pixQrCode || null,
       },
     });
     setHasChanges(false);
@@ -147,11 +152,17 @@ export default function SettingsPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Logo da Empresa</CardTitle><CardDescription>Será exibida no cabeçalho dos orçamentos e documentos.</CardDescription></CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Clique para fazer upload ou arraste a imagem</p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG ou SVG — até 2MB — recomendado 400×120px</p>
-              </div>
+              <FileUpload
+                currentUrl={settings.logo || null}
+                bucket="company-assets"
+                path="logo"
+                label="Clique para fazer upload ou arraste a imagem"
+                hint="PNG, JPG ou SVG — até 2MB — recomendado 400×120px"
+                accept="image/png,image/jpeg,image/svg+xml"
+                maxSizeMB={2}
+                onUploaded={(url) => update("logo", url)}
+                onRemoved={() => update("logo", "")}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -194,7 +205,7 @@ export default function SettingsPage() {
               <div className="border rounded-lg p-5 bg-background space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    {docShowLogo && <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>}
+                    {docShowLogo && (settings.logo ? <img src={settings.logo} alt="Logo" className="h-8 max-w-[120px] object-contain" /> : <div className="h-8 w-24 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">LOGO</div>)}
                     <p className="font-bold text-sm">{settings.nomeFantasia || settings.razaoSocial}</p>
                     <p className="text-[11px] text-muted-foreground">{settings.razaoSocial}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">{settings.cnpj}</p>
@@ -219,11 +230,18 @@ export default function SettingsPage() {
               <CardDescription>QR code exibido nos orçamentos para pagamento via PIX.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <QrCode className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Clique para fazer upload do QR Code PIX</p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG — até 1MB</p>
-              </div>
+              <FileUpload
+                currentUrl={settings.pixQrCode || null}
+                bucket="company-assets"
+                path="pix-qr-code"
+                label="Clique para fazer upload do QR Code PIX"
+                hint="PNG, JPG — até 1MB"
+                accept="image/png,image/jpeg"
+                maxSizeMB={1}
+                onUploaded={(url) => update("pixQrCode", url)}
+                onRemoved={() => update("pixQrCode", "")}
+                previewClassName="h-24 w-24"
+              />
             </CardContent>
           </Card>
         </TabsContent>
