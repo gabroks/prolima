@@ -1,20 +1,20 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBudgets, useUpdateBudgetStatus, type BudgetWithItems } from "@/hooks/useBudgets";
+import { useBudgets, useBudgetCount, useUpdateBudgetStatus, useDeleteBudget, useDuplicateBudget, type BudgetWithItems } from "@/hooks/useBudgets";
 import { usePayments } from "@/hooks/usePayments";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
-  ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle,
+  ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2,
 } from "lucide-react";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -25,13 +25,17 @@ type SortKey = "date-desc" | "date-asc" | "value-desc" | "value-asc" | "client" 
 export default function Budgets() {
   const navigate = useNavigate();
   const { data: budgets = [], isLoading } = useBudgets();
+  const { data: budgetCount = 0 } = useBudgetCount();
   const { data: payments = [] } = usePayments();
   const updateStatus = useUpdateBudgetStatus();
+  const deleteBudget = useDeleteBudget();
+  const duplicateBudget = useDuplicateBudget();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("date-desc");
   const [detailBudget, setDetailBudget] = useState<BudgetWithItems | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -73,6 +77,19 @@ export default function Budgets() {
     const label = budgetStatusConfig[newStatus].label;
     toast.success(`Status alterado para ${label}`);
     if (detailBudget?.id === id) setDetailBudget(prev => prev ? { ...prev, status: newStatus } : null);
+  };
+
+  const handleDuplicate = (budget: BudgetWithItems) => {
+    const newNumber = `ORC-${String(budgetCount + 1).padStart(3, "0")}`;
+    duplicateBudget.mutate({ budget, newNumber });
+    setDetailBudget(null);
+  };
+
+  const handleDelete = () => {
+    if (!deleteId) return;
+    deleteBudget.mutate(deleteId);
+    setDeleteId(null);
+    setDetailBudget(null);
   };
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
@@ -119,6 +136,8 @@ export default function Budgets() {
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(b)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(b.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </TableCell>
             </TableRow>
@@ -128,6 +147,7 @@ export default function Budgets() {
 
       <div className="flex justify-between text-xs text-muted-foreground"><span>Exibindo {filtered.length} de {budgets.length} orçamentos</span><span className="font-semibold text-foreground tabular-nums">Valor filtrado: {formatCurrency(totalValue)}</span></div>
 
+      {/* Detail Dialog */}
       <Dialog open={!!detailBudget} onOpenChange={() => setDetailBudget(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {detailBudget && (() => {
@@ -180,8 +200,8 @@ export default function Budgets() {
                 {detailBudget.payment_terms && <div className="text-sm"><span className="text-muted-foreground">Pagamento: </span><span className="font-medium">{detailBudget.payment_terms}</span></div>}
                 {detailBudget.general_notes && <div className="text-sm"><span className="text-muted-foreground">Observações: </span><span>{detailBudget.general_notes}</span></div>}
                 <Separator />
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Alterar Status</h4>
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Ações</h4>
                   <div className="flex gap-2 flex-wrap">
                     {(["draft", "issued", "approved", "rejected"] as BudgetStatus[]).filter(s => s !== detailBudget.status).map(s => {
                       const cfg = budgetStatusConfig[s];
@@ -190,12 +210,34 @@ export default function Budgets() {
                       return <Button key={s} variant="outline" size="sm" onClick={() => changeStatus(detailBudget.id, s)}><Icon className="h-3.5 w-3.5 mr-1.5" />{cfg.label}</Button>;
                     })}
                   </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleDuplicate(detailBudget)}>
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />Duplicar
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setDeleteId(detailBudget.id); }}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />Excluir
+                    </Button>
+                  </div>
                 </div>
               </>
             );
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação excluirá o orçamento e todos os seus itens permanentemente. Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
