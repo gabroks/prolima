@@ -16,6 +16,7 @@ import SettingsPage from "@/pages/Settings";
 import Backup from "@/pages/Backup";
 import Profile from "@/pages/Profile";
 import Notifications from "@/pages/Notifications";
+import ClientDetail from "@/pages/ClientDetail";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/clientes" element={<Clients />} />
+            <Route path="/clientes/:id" element={<ClientDetail />} />
             <Route path="/fornecedores" element={<Suppliers />} />
             <Route path="/materiais" element={<Materials />} />
             <Route path="/novo-orcamento" element={<NewBudget />} />

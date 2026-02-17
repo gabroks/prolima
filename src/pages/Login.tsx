@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Eye, EyeOff } from "lucide-react";
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export default function Login() {
@@ -11,6 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,8 +107,12 @@ export default function Login() {
                     </button>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
+                  <Label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer">Lembrar de mim</Label>
+                </div>
                 <Button type="submit" className="w-full h-11 text-sm font-semibold shadow-md shadow-primary/20" disabled={loading}>
-                  {loading ? "Entrando…" : "Entrar"}
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Entrando…</> : "Entrar"}
                 </Button>
               </form>
             </CardContent>
