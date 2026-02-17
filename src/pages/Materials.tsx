@@ -9,10 +9,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { mockMaterials, mockBudgets } from "@/data/mock";
-import { Material } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, MaterialForm, DbMaterial } from "@/hooks/useMaterials";
 import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, Tag, DollarSign, Layers } from "lucide-react";
-import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
 
 const CHARGE_UNITS = ["m²", "metro", "unidade", "kg", "litro", "peça"];
@@ -20,17 +19,21 @@ const MEASURE_UNITS = ["centímetro", "metro", "milímetro", "unidade"];
 
 type SortKey = "name" | "price-asc" | "price-desc" | "category";
 
-const emptyForm: Partial<Material> = { chargeUnit: "m²", measureUnit: "centímetro", category: "" };
+const emptyForm: MaterialForm = { name: "", category: "", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 0 };
 
 export default function Materials() {
-  const [materials, setMaterials] = useState<Material[]>(mockMaterials);
+  const { data: materials = [], isLoading } = useMaterials();
+  const createMaterial = useCreateMaterial();
+  const updateMaterial = useUpdateMaterial();
+  const deleteMaterial = useDeleteMaterial();
+
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Material>>(emptyForm);
+  const [form, setForm] = useState<MaterialForm>(emptyForm);
 
   const categories = useMemo(() =>
     [...new Set(materials.map(m => m.category).filter(Boolean))].sort(),
@@ -45,57 +48,60 @@ export default function Materials() {
       return matchSearch && matchCategory;
     });
 
+    const sorted = [...result];
     switch (sortBy) {
-      case "name": result.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case "price-asc": result.sort((a, b) => a.basePrice - b.basePrice); break;
-      case "price-desc": result.sort((a, b) => b.basePrice - a.basePrice); break;
-      case "category": result.sort((a, b) => (a.category || "").localeCompare(b.category || "")); break;
+      case "name": sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
+      case "price-asc": sorted.sort((a, b) => a.base_price - b.base_price); break;
+      case "price-desc": sorted.sort((a, b) => b.base_price - a.base_price); break;
+      case "category": sorted.sort((a, b) => (a.category || "").localeCompare(b.category || "")); break;
     }
-    return result;
+    return sorted;
   }, [materials, search, categoryFilter, sortBy]);
 
-  const avgPrice = materials.length > 0 ? materials.reduce((s, m) => s + m.basePrice, 0) / materials.length : 0;
-  const maxPrice = materials.length > 0 ? Math.max(...materials.map(m => m.basePrice)) : 0;
-
-  // Usage count per material across all budgets
-  const materialUsage = useMemo(() => {
-    const map: Record<string, number> = {};
-    mockBudgets.forEach(b => b.items.forEach(item => {
-      map[item.materialId] = (map[item.materialId] || 0) + 1;
-    }));
-    return map;
-  }, []);
+  const avgPrice = materials.length > 0 ? materials.reduce((s, m) => s + m.base_price, 0) / materials.length : 0;
+  const maxPrice = materials.length > 0 ? Math.max(...materials.map(m => m.base_price)) : 0;
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (m: Material) => { setEditingId(m.id); setForm({ ...m }); setDialogOpen(true); };
+  const openEdit = (m: DbMaterial) => {
+    setEditingId(m.id);
+    setForm({
+      name: m.name, category: m.category,
+      chargeUnit: m.charge_unit, measureUnit: m.measure_unit,
+      basePrice: m.base_price, notes: m.notes || undefined,
+    });
+    setDialogOpen(true);
+  };
 
   const handleSave = () => {
-    if (!form.name) { toast.error("Informe o nome do material"); return; }
-    if (!form.basePrice || form.basePrice <= 0) { toast.error("Informe um preço válido"); return; }
+    if (!form.name) return;
+    if (!form.basePrice || form.basePrice <= 0) return;
     if (editingId) {
-      setMaterials(prev => prev.map(m => m.id === editingId ? { ...m, ...form } as Material : m));
-      toast.success("Material atualizado!");
+      updateMaterial.mutate({ id: editingId, form });
     } else {
-      const newMaterial: Material = {
-        id: Date.now().toString(), name: form.name!,
-        category: form.category || "Outros",
-        chargeUnit: form.chargeUnit || "m²", measureUnit: form.measureUnit || "centímetro",
-        basePrice: form.basePrice || 0, notes: form.notes,
-      };
-      setMaterials(prev => [...prev, newMaterial]);
-      toast.success("Material cadastrado!");
+      createMaterial.mutate(form);
     }
     setDialogOpen(false); setForm(emptyForm); setEditingId(null);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    setMaterials(prev => prev.filter(m => m.id !== deleteId));
+    deleteMaterial.mutate(deleteId);
     setDeleteId(null);
-    toast.success("Material removido!");
   };
 
-  const updateField = (field: keyof Material, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof MaterialForm, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -112,8 +118,8 @@ export default function Materials() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: materials.length, icon: Package, suffix: "itens" },
-          { label: "Categorias", value: categories.length, icon: Layers, suffix: "tipos" },
+          { label: "Total", value: materials.length, icon: Package },
+          { label: "Categorias", value: categories.length, icon: Layers },
           { label: "Preço Médio", value: formatCurrency(avgPrice), icon: DollarSign },
           { label: "Maior Preço", value: formatCurrency(maxPrice), icon: Tag },
         ].map(s => (
@@ -168,7 +174,6 @@ export default function Materials() {
                 <TableHead className="hidden sm:table-cell">Categoria</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead className="hidden md:table-cell">Medida</TableHead>
-                <TableHead className="hidden sm:table-cell">Uso</TableHead>
                 <TableHead>Preço Base</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -176,7 +181,7 @@ export default function Materials() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || categoryFilter !== "all" ? "Nenhum material encontrado" : "Nenhum material cadastrado"}</p>
                     {!search && categoryFilter === "all" && (
@@ -198,16 +203,9 @@ export default function Materials() {
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs font-normal">{m.category}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{m.chargeUnit}</TableCell>
-                  <TableCell className="hidden md:table-cell text-sm">{m.measureUnit}</TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    {materialUsage[m.id] ? (
-                      <Badge variant="outline" className="text-[10px] h-5 px-1.5 tabular-nums">{materialUsage[m.id]} orç.</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(m.basePrice)}</TableCell>
+                  <TableCell className="text-sm">{m.charge_unit}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{m.measure_unit}</TableCell>
+                  <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(m.base_price)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(m)}>
@@ -278,7 +276,9 @@ export default function Materials() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editingId ? "Atualizar" : "Salvar"}</Button>
+            <Button onClick={handleSave} disabled={createMaterial.isPending || updateMaterial.isPending}>
+              {editingId ? "Atualizar" : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
