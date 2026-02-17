@@ -13,13 +13,13 @@ import { mockBudgets, mockPayments, mockSuppliers, mockExpenses } from "@/data/m
 import { Expense } from "@/types";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Search, Pencil, Trash2, Receipt,
-  ArrowUpDown, Tag, BarChart3,
+  ArrowUpDown, Tag, BarChart3, CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from "recharts";
 
-const CATEGORIES = ["Material", "Serviço", "Fixo", "Transporte", "Alimentação", "Outros"] as const;
+const CATEGORIES = ["Material", "Serviço", "Fixo", "Transporte", "Alimentação", "Manutenção", "Equipamento", "Outros"] as const;
 
 const CATEGORY_COLORS: Record<string, string> = {
   Material: "hsl(var(--primary))",
@@ -27,6 +27,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   Fixo: "hsl(var(--chart-2))",
   Transporte: "hsl(var(--chart-4))",
   Alimentação: "hsl(var(--chart-5))",
+  Manutenção: "hsl(var(--chart-1))",
+  Equipamento: "hsl(var(--chart-3))",
   Outros: "hsl(var(--muted-foreground))",
 };
 
@@ -57,6 +59,22 @@ export default function Expenses() {
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+  }, [expenses]);
+
+  // Monthly trend
+  const monthlyTrend = useMemo(() => {
+    const months: Record<string, number> = {};
+    expenses.forEach(e => {
+      const key = e.date.slice(0, 7);
+      months[key] = (months[key] || 0) + e.amount;
+    });
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    return Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, total]) => {
+        const m = parseInt(key.split("-")[1]) - 1;
+        return { month: monthNames[m], total };
+      });
   }, [expenses]);
 
   const filtered = useMemo(() => {
@@ -174,10 +192,29 @@ export default function Expenses() {
               <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }} />
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                 {categoryBreakdown.map((entry) => (
-                  <rect key={entry.name} fill={CATEGORY_COLORS[entry.name] || "hsl(var(--muted))"} />
+                  <Cell key={entry.name} fill={CATEGORY_COLORS[entry.name] || "hsl(var(--muted))"} />
                 ))}
               </Bar>
             </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* Monthly Trend */}
+      {monthlyTrend.length > 1 && (
+        <Card className="p-5">
+          <p className="text-sm font-semibold flex items-center gap-2 mb-4">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            Evolução Mensal de Despesas
+          </p>
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={monthlyTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => [formatCurrency(v), "Despesas"]} contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }} />
+              <Area type="monotone" dataKey="total" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive))" fillOpacity={0.1} strokeWidth={2} />
+            </AreaChart>
           </ResponsiveContainer>
         </Card>
       )}
