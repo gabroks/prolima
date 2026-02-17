@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, MaterialForm, DbMaterial } from "@/hooks/useMaterials";
 import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, Tag, DollarSign, Layers } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { toast } from "sonner";
 
 const CHARGE_UNITS = ["m²", "metro", "unidade", "kg", "litro", "peça"];
 const MEASURE_UNITS = ["centímetro", "metro", "milímetro", "unidade"];
@@ -73,8 +74,8 @@ export default function Materials() {
   };
 
   const handleSave = () => {
-    if (!form.name) return;
-    if (!form.basePrice || form.basePrice <= 0) return;
+    if (!form.name) { toast.error("Informe o nome do material"); return; }
+    if (!form.basePrice || form.basePrice <= 0) { toast.error("Informe um preço base válido"); return; }
     if (editingId) {
       updateMaterial.mutate({ id: editingId, form });
     } else {

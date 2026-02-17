@@ -16,6 +16,7 @@ import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, 
 import { useExpenses } from "@/hooks/useExpenses";
 import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { toast } from "sonner";
 
 type SortKey = "name" | "city" | "status";
 
@@ -76,7 +77,7 @@ export default function Suppliers() {
   };
 
   const handleSave = () => {
-    if (!form.name) return;
+    if (!form.name) { toast.error("Informe o nome do fornecedor"); return; }
     if (editingId) {
       updateSupplier.mutate({ id: editingId, form });
     } else {
@@ -328,7 +329,7 @@ export default function Suppliers() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editingId ? "Atualizar" : "Salvar"}</Button>
+            <Button onClick={handleSave} disabled={createSupplier.isPending || updateSupplier.isPending}>{editingId ? "Atualizar" : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

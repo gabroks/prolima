@@ -18,6 +18,7 @@ import {
   ArrowUpDown, Phone, Mail, MapPin, MessageCircle,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/formatters";
+import { toast } from "sonner";
 
 type SortKey = "name" | "date-desc" | "date-asc" | "city";
 
@@ -86,9 +87,9 @@ export default function Clients() {
   };
 
   const handleSave = () => {
-    if (!form.name || !form.phone || !form.document) {
-      return;
-    }
+    if (!form.name) { toast.error("Informe o nome do cliente"); return; }
+    if (!form.phone) { toast.error("Informe o telefone do cliente"); return; }
+    if (!form.document) { toast.error("Informe o CPF/CNPJ do cliente"); return; }
     if (editingId) {
       updateClient.mutate({ id: editingId, form });
     } else {
