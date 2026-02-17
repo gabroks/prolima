@@ -3,28 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Shield, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-
-function getPasswordStrength(password: string): { score: number; label: string; color: string } {
-  let score = 0;
-  if (password.length >= 6) score += 20;
-  if (password.length >= 8) score += 20;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 20;
-  if (/\d/.test(password)) score += 20;
-  if (/[^a-zA-Z0-9]/.test(password)) score += 20;
-
-  if (score <= 20) return { score, label: "Muito fraca", color: "bg-destructive" };
-  if (score <= 40) return { score, label: "Fraca", color: "bg-destructive/70" };
-  if (score <= 60) return { score, label: "Razoável", color: "bg-warning" };
-  if (score <= 80) return { score, label: "Boa", color: "bg-primary/70" };
-  return { score, label: "Forte", color: "bg-primary" };
-}
+import { getPasswordStrength } from "@/lib/passwordStrength";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 
 export default function Login() {
   const { user, signIn, signUp } = useAuth();
@@ -96,15 +82,14 @@ export default function Login() {
     }
   };
 
-  // Redirect if already logged in
   if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen flex">
       {/* Left panel - branding */}
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(160,40%,28%)] to-[hsl(160,20%,10%)] flex-col justify-between p-12 text-white">
+      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-primary via-primary/80 to-primary/40 flex-col justify-between p-12 text-primary-foreground">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-primary-foreground/15 backdrop-blur flex items-center justify-center">
             <Shield className="h-6 w-6" />
           </div>
           <span className="text-xl font-bold tracking-tight">Pro Orçamento</span>
@@ -113,14 +98,14 @@ export default function Login() {
         <div className="space-y-6">
           <h1 className="text-4xl font-bold leading-tight tracking-tight">
             Gerencie seus<br />orçamentos com<br />
-            <span className="text-white/80">inteligência.</span>
+            <span className="opacity-80">inteligência.</span>
           </h1>
-          <p className="text-lg text-white/60 max-w-md leading-relaxed">
+          <p className="text-lg opacity-60 max-w-md leading-relaxed">
             Controle clientes, materiais, fornecedores e finanças em um único sistema pensado para o seu negócio.
           </p>
         </div>
 
-        <p className="text-sm text-white/30">© {new Date().getFullYear()} Pro Orçamento. Todos os direitos reservados.</p>
+        <p className="text-sm opacity-30">© {new Date().getFullYear()} Pro Orçamento. Todos os direitos reservados.</p>
       </div>
 
       {/* Right panel - form */}
@@ -186,21 +171,8 @@ export default function Login() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {/* Password strength indicator for signup */}
                   {isSignUp && password.length > 0 && (
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-muted-foreground">Força da senha</span>
-                        <span className="text-[11px] font-medium">{passwordStrength.label}</span>
-                      </div>
-                      <Progress value={passwordStrength.score} className="h-1.5" />
-                      <ul className="text-[10px] text-muted-foreground space-y-0.5">
-                        <li className={password.length >= 8 ? "text-primary" : ""}>• Mínimo 8 caracteres</li>
-                        <li className={/[a-z]/.test(password) && /[A-Z]/.test(password) ? "text-primary" : ""}>• Letras maiúsculas e minúsculas</li>
-                        <li className={/\d/.test(password) ? "text-primary" : ""}>• Pelo menos um número</li>
-                        <li className={/[^a-zA-Z0-9]/.test(password) ? "text-primary" : ""}>• Caractere especial (!@#$)</li>
-                      </ul>
-                    </div>
+                    <PasswordStrengthIndicator strength={passwordStrength} />
                   )}
                 </div>
                 {!isSignUp && (
