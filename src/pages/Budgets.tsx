@@ -6,13 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { mockBudgets } from "@/data/mock";
 import { Search } from "lucide-react";
-
-const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  draft: { label: "Rascunho", variant: "secondary" },
-  issued: { label: "Emitido", variant: "outline" },
-  approved: { label: "Aprovado", variant: "default" },
-  rejected: { label: "Rejeitado", variant: "destructive" },
-};
+import { formatCurrency, formatDate, budgetStatusConfig } from "@/lib/formatters";
 
 export default function Budgets() {
   const [search, setSearch] = useState("");
@@ -71,15 +65,18 @@ export default function Budgets() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum orçamento encontrado</TableCell></TableRow>
-              ) : filtered.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell className="font-medium">{b.number}</TableCell>
-                  <TableCell>{b.clientName}</TableCell>
-                  <TableCell>{new Date(b.createdAt).toLocaleDateString("pt-BR")}</TableCell>
-                  <TableCell>R$ {b.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell><Badge variant={statusMap[b.status].variant}>{statusMap[b.status].label}</Badge></TableCell>
-                </TableRow>
-              ))}
+              ) : filtered.map((b) => {
+                const st = budgetStatusConfig[b.status as keyof typeof budgetStatusConfig];
+                return (
+                  <TableRow key={b.id}>
+                    <TableCell className="font-medium">{b.number}</TableCell>
+                    <TableCell>{b.clientName}</TableCell>
+                    <TableCell>{formatDate(b.createdAt)}</TableCell>
+                    <TableCell className="tabular-nums">{formatCurrency(b.total)}</TableCell>
+                    <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -87,7 +84,7 @@ export default function Budgets() {
 
       <div className="flex justify-between text-sm text-muted-foreground">
         <span>Total de orçamentos: {filtered.length}</span>
-        <span className="font-semibold text-foreground">Valor total: R$ {totalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+        <span className="font-semibold text-foreground tabular-nums">Valor total: {formatCurrency(totalValue)}</span>
       </div>
     </div>
   );
