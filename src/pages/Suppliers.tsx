@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { mockSuppliers } from "@/data/mock";
+import { mockSuppliers, mockExpenses } from "@/data/mock";
 import { Supplier } from "@/types";
-import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/formatters";
 
 type SortKey = "name" | "city" | "status";
 
@@ -47,6 +48,14 @@ export default function Suppliers() {
 
   const activeCount = suppliers.filter(s => s.active).length;
   const cities = useMemo(() => [...new Set(suppliers.map(s => s.city).filter(Boolean))], [suppliers]);
+
+  // Expense totals per supplier
+  const supplierExpenses = useMemo(() => {
+    const map: Record<string, number> = {};
+    mockExpenses.forEach(e => { if (e.supplierId) map[e.supplierId] = (map[e.supplierId] || 0) + e.amount; });
+    return map;
+  }, []);
+  const totalSupplierExpenses = Object.values(supplierExpenses).reduce((s, v) => s + v, 0);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (s: Supplier) => { setEditingId(s.id); setForm({ ...s }); setDialogOpen(true); };
@@ -102,7 +111,7 @@ export default function Suppliers() {
           { label: "Total", value: suppliers.length, icon: Truck, color: "text-primary" },
           { label: "Ativos", value: activeCount, icon: CheckCircle, color: "text-primary" },
           { label: "Inativos", value: suppliers.length - activeCount, icon: XCircle, color: "text-destructive" },
-          { label: "Cidades", value: cities.length, icon: MapPin, color: "text-primary" },
+          { label: "Total Gasto", value: formatCurrency(totalSupplierExpenses), icon: DollarSign, color: "text-primary" },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center gap-3">
@@ -154,6 +163,7 @@ export default function Suppliers() {
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
                 <TableHead className="hidden lg:table-cell">Cidade</TableHead>
+                <TableHead className="hidden sm:table-cell">Gasto Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -161,7 +171,7 @@ export default function Suppliers() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || statusFilter !== "all" ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}</p>
                     {!search && statusFilter === "all" && (
@@ -208,6 +218,11 @@ export default function Suppliers() {
                         <MapPin className="h-3.5 w-3.5 text-muted-foreground" />{s.city}
                       </span>
                     ) : "—"}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="text-sm font-semibold tabular-nums text-primary">
+                      {supplierExpenses[s.id] ? formatCurrency(supplierExpenses[s.id]) : "—"}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge
