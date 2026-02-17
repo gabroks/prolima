@@ -34,6 +34,7 @@ export default function Budgets() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("date-desc");
+  const [page, setPage] = useState(0);
   const [detailBudget, setDetailBudget] = useState<BudgetWithItems | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -54,6 +55,11 @@ export default function Budgets() {
     }
     return result;
   }, [budgets, search, statusFilter, sortBy]);
+
+  const PAGE_SIZE = 15;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
+  const resetPage = () => setPage(0);
 
   const totalValue = filtered.reduce((s, b) => s + Number(b.total), 0);
   const counts = {
@@ -87,9 +93,7 @@ export default function Budgets() {
 
   const handleDelete = () => {
     if (!deleteId) return;
-    deleteBudget.mutate(deleteId);
-    setDeleteId(null);
-    setDetailBudget(null);
+    deleteBudget.mutate(deleteId, { onSuccess: () => { setDeleteId(null); setDetailBudget(null); } });
   };
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
@@ -113,15 +117,15 @@ export default function Budgets() {
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por cliente, número ou descrição…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" /></div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos status</SelectItem><SelectItem value="draft">Rascunhos</SelectItem><SelectItem value="issued">Emitidos</SelectItem><SelectItem value="approved">Aprovados</SelectItem><SelectItem value="rejected">Rejeitados</SelectItem></SelectContent></Select>
+        <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por cliente, número ou descrição…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" /></div>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos status</SelectItem><SelectItem value="draft">Rascunhos</SelectItem><SelectItem value="issued">Emitidos</SelectItem><SelectItem value="approved">Aprovados</SelectItem><SelectItem value="rejected">Rejeitados</SelectItem></SelectContent></Select>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}><SelectTrigger className="w-[160px]"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="date-desc">Mais recente</SelectItem><SelectItem value="date-asc">Mais antigo</SelectItem><SelectItem value="value-desc">Maior valor</SelectItem><SelectItem value="value-asc">Menor valor</SelectItem><SelectItem value="client">Cliente A-Z</SelectItem><SelectItem value="number">Número</SelectItem></SelectContent></Select>
       </div>
 
       <Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Número</TableHead><TableHead>Cliente</TableHead><TableHead className="hidden md:table-cell">Data</TableHead><TableHead>Valor</TableHead><TableHead className="hidden sm:table-cell">Recebido</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
         {filtered.length === 0 ? (
           <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground"><FileText className="h-10 w-10 mx-auto mb-2 opacity-30" /><p>Nenhum orçamento encontrado</p>{!search && statusFilter === "all" && <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/novo-orcamento")}><FilePlus className="h-3.5 w-3.5 mr-1.5" />Criar primeiro orçamento</Button>}</TableCell></TableRow>
-        ) : filtered.map((b) => {
+        ) : paged.map((b) => {
           const st = budgetStatusConfig[b.status as BudgetStatus];
           const paid = paymentsMap[b.id] || 0;
           const paidPct = Number(b.total) > 0 ? Math.min(100, Math.round((paid / Number(b.total)) * 100)) : 0;
@@ -145,7 +149,19 @@ export default function Budgets() {
         })}
       </TableBody></Table></CardContent></Card>
 
-      <div className="flex justify-between text-xs text-muted-foreground"><span>Exibindo {filtered.length} de {budgets.length} orçamentos</span><span className="font-semibold text-foreground tabular-nums">Valor filtrado: {formatCurrency(totalValue)}</span></div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-xs text-muted-foreground">Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} orçamentos</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-foreground tabular-nums">Total: {formatCurrency(totalValue)}</span>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+              <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Detail Dialog */}
       <Dialog open={!!detailBudget} onOpenChange={() => setDetailBudget(null)}>
@@ -234,7 +250,7 @@ export default function Budgets() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteBudget.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleteBudget.isPending ? "Excluindo…" : "Excluir"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
