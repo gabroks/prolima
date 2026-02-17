@@ -1,14 +1,30 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Shield, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+
+function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+  let score = 0;
+  if (password.length >= 6) score += 20;
+  if (password.length >= 8) score += 20;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 20;
+  if (/\d/.test(password)) score += 20;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 20;
+
+  if (score <= 20) return { score, label: "Muito fraca", color: "bg-destructive" };
+  if (score <= 40) return { score, label: "Fraca", color: "bg-destructive/70" };
+  if (score <= 60) return { score, label: "Razoável", color: "bg-warning" };
+  if (score <= 80) return { score, label: "Boa", color: "bg-primary/70" };
+  return { score, label: "Forte", color: "bg-primary" };
+}
 
 export default function Login() {
   const { user, signIn, signUp } = useAuth();
@@ -21,6 +37,8 @@ export default function Login() {
   const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
+
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +57,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  // If already logged in, redirect
-  if (user) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +95,9 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Redirect if already logged in
+  if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen flex">
@@ -168,6 +186,22 @@ export default function Login() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {/* Password strength indicator for signup */}
+                  {isSignUp && password.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground">Força da senha</span>
+                        <span className="text-[11px] font-medium">{passwordStrength.label}</span>
+                      </div>
+                      <Progress value={passwordStrength.score} className="h-1.5" />
+                      <ul className="text-[10px] text-muted-foreground space-y-0.5">
+                        <li className={password.length >= 8 ? "text-primary" : ""}>• Mínimo 8 caracteres</li>
+                        <li className={/[a-z]/.test(password) && /[A-Z]/.test(password) ? "text-primary" : ""}>• Letras maiúsculas e minúsculas</li>
+                        <li className={/\d/.test(password) ? "text-primary" : ""}>• Pelo menos um número</li>
+                        <li className={/[^a-zA-Z0-9]/.test(password) ? "text-primary" : ""}>• Caractere especial (!@#$)</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 {!isSignUp && (
                   <div className="flex items-center gap-2">
@@ -185,7 +219,7 @@ export default function Login() {
           <p className="text-center text-xs text-muted-foreground mt-6">
             {isSignUp ? "Já tem uma conta? " : "Não tem uma conta? "}
             <button
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => { setIsSignUp(!isSignUp); setPassword(""); }}
               className="text-primary font-medium hover:underline"
             >
               {isSignUp ? "Fazer login" : "Criar conta"}
