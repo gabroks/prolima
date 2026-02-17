@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Save, Lock, Eye, EyeOff, Shield, Mail, User } from "lucide-react";
 import { toast } from "sonner";
@@ -113,7 +112,7 @@ export default function Profile() {
                   <span className="text-xs text-muted-foreground">Força da senha</span>
                   <span className={`text-xs font-medium ${strength.value <= 25 ? "text-destructive" : strength.value <= 50 ? "text-warning" : strength.value <= 75 ? "text-info" : "text-primary"}`}>{strength.label}</span>
                 </div>
-                <Progress value={strength.value} className={`h-1.5 [&>div]:${strength.color}`} />
+                <Progress value={strength.value} className={`h-1.5 ${strength.value <= 25 ? "[&>div]:bg-destructive" : strength.value <= 50 ? "[&>div]:bg-warning" : strength.value <= 75 ? "[&>div]:bg-info" : "[&>div]:bg-primary"}`} />
               </div>
             )}
           </div>
