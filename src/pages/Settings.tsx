@@ -12,11 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanySettings, useUpdateCompanySettings } from "@/hooks/useCompanySettings";
+import { useIsAdmin } from "@/hooks/useAdmin";
 import {
   Upload, Building2, Palette, QrCode, Save, Check,
   FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
 } from "lucide-react";
 import { FileUpload } from "@/components/settings/FileUpload";
+import { AdminThemeSettings } from "@/components/settings/AdminThemeSettings";
 
 const colorOptions = [
   { name: "Verde", value: "green", hsl: "152 58% 36%" },
@@ -34,6 +36,7 @@ const STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG"
 export default function SettingsPage() {
   const { data: dbSettings, isLoading } = useCompanySettings();
   const updateSettings = useUpdateCompanySettings();
+  const { data: isAdmin = false } = useIsAdmin();
 
   const [localSettings, setLocalSettings] = useState<Record<string, any> | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -117,11 +120,12 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="empresa" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-5" : "grid-cols-4"}`}>
           <TabsTrigger value="empresa" className="text-xs sm:text-sm"><Building2 className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Empresa</TabsTrigger>
           <TabsTrigger value="documentos" className="text-xs sm:text-sm"><FileText className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Documentos</TabsTrigger>
           <TabsTrigger value="visual" className="text-xs sm:text-sm"><Palette className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Visual</TabsTrigger>
           <TabsTrigger value="notificacoes" className="text-xs sm:text-sm"><Bell className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Alertas</TabsTrigger>
+          {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm"><Shield className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />Admin</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="empresa" className="space-y-4">
@@ -317,6 +321,22 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="admin" className="space-y-4">
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Shield className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold">Painel Administrativo</p>
+                  <p className="text-xs text-muted-foreground">Configurações avançadas visíveis apenas para administradores.</p>
+                </div>
+                <Badge className="ml-auto">Admin</Badge>
+              </CardContent>
+            </Card>
+            <AdminThemeSettings />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
