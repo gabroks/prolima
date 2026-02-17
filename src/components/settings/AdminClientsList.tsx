@@ -5,20 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useClients, useToggleClientStatus } from "@/hooks/useClients";
+import { useProfiles, useToggleProfileStatus } from "@/hooks/useProfiles";
 import { useSystemLimits, useUpdateSystemLimits, useUsageCounts } from "@/hooks/useSystemLimits";
-import { Users, FileText, Package, Truck, Search, Save } from "lucide-react";
-import { toast } from "sonner";
+import { Users, FileText, Package, Truck, Search, Save, UserCheck, UserX } from "lucide-react";
+import { format } from "date-fns";
 
 export function AdminClientsList() {
-  const { data: clients, isLoading: loadingClients } = useClients();
-  const toggleStatus = useToggleClientStatus();
+  const { data: profiles, isLoading: loadingProfiles } = useProfiles();
+  const toggleStatus = useToggleProfileStatus();
   const { data: limits, isLoading: loadingLimits } = useSystemLimits();
   const { data: usage, isLoading: loadingUsage } = useUsageCounts();
   const updateLimits = useUpdateSystemLimits();
@@ -26,11 +25,11 @@ export function AdminClientsList() {
   const [search, setSearch] = useState("");
   const [editLimits, setEditLimits] = useState<Record<string, number> | null>(null);
 
-  const isLoading = loadingClients || loadingLimits || loadingUsage;
+  const isLoading = loadingProfiles || loadingLimits || loadingUsage;
 
-  const filteredClients = clients?.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.document?.toLowerCase().includes(search.toLowerCase())
+  const filteredProfiles = profiles?.filter(p =>
+    p.email.toLowerCase().includes(search.toLowerCase()) ||
+    p.name.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
 
   const currentLimits = editLimits || (limits ? {
@@ -54,6 +53,9 @@ export function AdminClientsList() {
   ];
 
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-40" /><Skeleton className="h-64" /></div>;
+
+  const activeCount = profiles?.filter(p => p.active).length ?? 0;
+  const inactiveCount = profiles?.filter(p => !p.active).length ?? 0;
 
   return (
     <div className="space-y-4">
@@ -105,17 +107,31 @@ export function AdminClientsList() {
         </CardContent>
       </Card>
 
-      {/* Client list */}
+      {/* User profiles list */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Cadastros de Clientes</CardTitle>
-          <CardDescription>Ative ou desative clientes para controlar o acesso ao sistema.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Usuários do Sistema</CardTitle>
+              <CardDescription>Usuários que fizeram login com e-mail e senha.</CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs">
+                <UserCheck className="h-3.5 w-3.5 text-green-500" />
+                <span>{activeCount} ativos</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <UserX className="h-3.5 w-3.5 text-destructive" />
+                <span>{inactiveCount} inativos</span>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou documento..."
+              placeholder="Buscar por nome ou e-mail..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9"
@@ -125,35 +141,39 @@ export function AdminClientsList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="hidden sm:table-cell">Documento</TableHead>
-                  <TableHead className="hidden sm:table-cell">Telefone</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead className="hidden sm:table-cell">E-mail</TableHead>
+                  <TableHead className="hidden sm:table-cell">Cadastro</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.length === 0 ? (
+                {filteredProfiles.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Nenhum cliente encontrado.
+                      Nenhum usuário encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredClients.map(client => (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium text-sm">{client.name}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{client.document}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{client.phone}</TableCell>
+                  filteredProfiles.map(profile => (
+                    <TableRow key={profile.id}>
+                      <TableCell className="font-medium text-sm">
+                        {profile.name || <span className="text-muted-foreground italic">Sem nome</span>}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{profile.email}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                        {format(new Date(profile.created_at), "dd/MM/yyyy")}
+                      </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-[10px]">
-                          {client.status === "active" ? "Ativo" : "Inativo"}
+                        <Badge variant={profile.active ? "default" : "secondary"} className="text-[10px]">
+                          {profile.active ? "Ativo" : "Inativo"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         <Switch
-                          checked={client.status === "active"}
-                          onCheckedChange={() => toggleStatus.mutate({ id: client.id, currentStatus: client.status })}
+                          checked={profile.active}
+                          onCheckedChange={() => toggleStatus.mutate({ id: profile.id, currentActive: profile.active })}
                         />
                       </TableCell>
                     </TableRow>
@@ -162,9 +182,6 @@ export function AdminClientsList() {
               </TableBody>
             </Table>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Total: {clients?.length ?? 0} clientes cadastrados
-          </p>
         </CardContent>
       </Card>
     </div>
