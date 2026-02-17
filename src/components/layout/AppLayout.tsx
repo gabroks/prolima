@@ -39,11 +39,13 @@ const routeParents: Record<string, { name: string; path: string }> = {
 function getPageName(pathname: string): string {
   if (routeNames[pathname]) return routeNames[pathname];
   if (pathname.startsWith("/clientes/")) return "Detalhe do Cliente";
+  if (pathname.startsWith("/editar-orcamento/")) return "Editar Orçamento";
   return "Página";
 }
 
 function getParentRoute(pathname: string): { name: string; path: string } | null {
   if (pathname.startsWith("/clientes/")) return { name: "Clientes", path: "/clientes" };
+  if (pathname.startsWith("/editar-orcamento/")) return { name: "Orçamentos", path: "/orcamentos" };
   return routeParents[pathname] || null;
 }
 
