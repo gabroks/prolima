@@ -45,6 +45,7 @@ const App = () => (
                 <Route path="/fornecedores" element={<Suppliers />} />
                 <Route path="/materiais" element={<Materials />} />
                 <Route path="/novo-orcamento" element={<NewBudget />} />
+                <Route path="/editar-orcamento/:id" element={<NewBudget />} />
                 <Route path="/orcamentos" element={<Budgets />} />
                 <Route path="/financeiro" element={<Financial />} />
                 <Route path="/despesas" element={<Expenses />} />

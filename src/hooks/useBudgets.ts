@@ -118,6 +118,77 @@ export function useCreateBudget() {
   });
 }
 
+export function useUpdateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, form }: { id: string; form: BudgetFormData }) => {
+      const { error: budgetError } = await supabase
+        .from("budgets")
+        .update({
+          client_id: form.clientId,
+          client_name: form.clientName,
+          validity_date: form.validityDate || null,
+          delivery_date: form.deliveryDate || null,
+          service_description: form.serviceDescription || null,
+          discount_type: form.discountType,
+          discount_value: form.discountValue,
+          freight: form.freight,
+          other_costs: form.otherCosts,
+          payment_terms: form.paymentTerms || null,
+          general_notes: form.generalNotes || null,
+          subtotal: form.subtotal,
+          total_discount: form.totalDiscount,
+          total: form.total,
+          status: form.status,
+        })
+        .eq("id", id);
+      if (budgetError) throw budgetError;
+
+      // Delete old items and insert new ones
+      const { error: delErr } = await supabase.from("budget_items").delete().eq("budget_id", id);
+      if (delErr) throw delErr;
+
+      if (form.items.length > 0) {
+        const itemsInsert: TablesInsert<"budget_items">[] = form.items.map(item => ({
+          budget_id: id,
+          material_id: item.materialId || null,
+          material_name: item.materialName,
+          unit: item.unit,
+          width: item.width,
+          height: item.height,
+          qty: item.qty,
+          unit_price: item.unitPrice,
+          notes: item.notes || null,
+          total: item.total,
+        }));
+        const { error: itemsError } = await supabase.from("budget_items").insert(itemsInsert);
+        if (itemsError) throw itemsError;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      toast.success("Orçamento atualizado!");
+    },
+    onError: () => toast.error("Erro ao atualizar orçamento"),
+  });
+}
+
+export function useBudgetById(id: string | undefined) {
+  return useQuery({
+    queryKey: ["budgets", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("budgets")
+        .select("*, budget_items(*)")
+        .eq("id", id!)
+        .single();
+      if (error) throw error;
+      return data as BudgetWithItems;
+    },
+  });
+}
+
 export function useUpdateBudgetStatus() {
   const qc = useQueryClient();
   return useMutation({

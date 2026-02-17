@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClients } from "@/hooks/useClients";
 import { useMaterials } from "@/hooks/useMaterials";
-import { useBudgets, useBudgetCount, useCreateBudget, type BudgetFormData } from "@/hooks/useBudgets";
+import { useBudgetCount, useCreateBudget, useUpdateBudget, useBudgetById, type BudgetFormData } from "@/hooks/useBudgets";
 import { BudgetItem } from "@/types";
 import {
   Plus, Trash2, FileText, Package, ChevronRight, ChevronLeft,
@@ -20,7 +20,7 @@ import {
   AlertCircle, CheckCircle2, X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/formatters";
 
 interface ItemForm { materialId: string; unit: string; width: number; height: number; qty: number; unitPrice: number; notes: string; }
@@ -39,12 +39,20 @@ const STEPS = [
 
 export default function NewBudget() {
   const navigate = useNavigate();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = !!editId;
+
   const { data: clients = [], isLoading: lc } = useClients();
   const { data: materials = [], isLoading: lm } = useMaterials();
   const { data: budgetCount = 0 } = useBudgetCount();
+  const { data: existingBudget, isLoading: loadingBudget } = useBudgetById(editId);
   const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
 
-  const budgetNumber = useMemo(() => `ORC-${String(budgetCount + 1).padStart(3, "0")}`, [budgetCount]);
+  const budgetNumber = useMemo(() => {
+    if (isEditMode && existingBudget) return existingBudget.number;
+    return `ORC-${String(budgetCount + 1).padStart(3, "0")}`;
+  }, [budgetCount, isEditMode, existingBudget]);
 
   const [clientId, setClientId] = useState("");
   const [clientSearch, setClientSearch] = useState("");
@@ -62,6 +70,38 @@ export default function NewBudget() {
   const [paymentTerms, setPaymentTerms] = useState("");
   const [generalNotes, setGeneralNotes] = useState("");
   const [step, setStep] = useState(1);
+  const [initialized, setInitialized] = useState(false);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isEditMode && existingBudget && !initialized) {
+      setClientId(existingBudget.client_id || "");
+      setValidityDate(existingBudget.validity_date || "");
+      setDeliveryDate(existingBudget.delivery_date || "");
+      setServiceDescription(existingBudget.service_description || "");
+      setDiscountType(existingBudget.discount_type as "value" | "percent");
+      setDiscountValue(Number(existingBudget.discount_value));
+      setFreight(Number(existingBudget.freight));
+      setOtherCosts(Number(existingBudget.other_costs));
+      setPaymentTerms(existingBudget.payment_terms || "");
+      setGeneralNotes(existingBudget.general_notes || "");
+      setItems(
+        (existingBudget.budget_items || []).map(bi => ({
+          id: bi.id,
+          materialId: bi.material_id || "",
+          materialName: bi.material_name,
+          unit: bi.unit,
+          width: Number(bi.width),
+          height: Number(bi.height),
+          qty: bi.qty,
+          unitPrice: Number(bi.unit_price),
+          notes: bi.notes || undefined,
+          total: Number(bi.total),
+        }))
+      );
+      setInitialized(true);
+    }
+  }, [isEditMode, existingBudget, initialized]);
 
   const subtotal = items.reduce((s, i) => s + i.total, 0);
   const totalDiscount = discountType === "percent" ? subtotal * (discountValue / 100) : discountValue;
@@ -98,6 +138,8 @@ export default function NewBudget() {
 
   const removeItem = (id: string) => { setItems(prev => prev.filter(i => i.id !== id)); toast.success("Item removido"); };
 
+  const isSaving = createBudget.isPending || updateBudget.isPending;
+
   const handleSave = (asDraft: boolean) => {
     if (!clientId) { toast.error("Selecione um cliente"); setStep(1); return; }
     if (items.length === 0) { toast.error("Adicione pelo menos um item"); setStep(2); return; }
@@ -106,19 +148,26 @@ export default function NewBudget() {
       items: items.map(i => ({ materialId: i.materialId, materialName: i.materialName, unit: i.unit, width: i.width, height: i.height, qty: i.qty, unitPrice: i.unitPrice, notes: i.notes || "", total: i.total })),
       discountType, discountValue, freight, otherCosts, paymentTerms, generalNotes, subtotal, totalDiscount, total, status: asDraft ? "draft" : "issued",
     };
-    createBudget.mutate({ budgetNumber, form: formData }, { onSuccess: () => navigate("/orcamentos") });
+    if (isEditMode && editId) {
+      updateBudget.mutate({ id: editId, form: formData }, { onSuccess: () => navigate("/orcamentos") });
+    } else {
+      createBudget.mutate({ budgetNumber, form: formData }, { onSuccess: () => navigate("/orcamentos") });
+    }
   };
 
   const canProceed = (s: number) => { if (s === 1) return !!clientId; if (s === 2) return items.length > 0; return true; };
   const previewTotal = useMemo(() => itemForm.qty > 0 && itemForm.unitPrice > 0 ? calcItemTotal(itemForm) : 0, [itemForm]);
   const previewArea = useMemo(() => itemForm.unit === "m²" && itemForm.width > 0 && itemForm.height > 0 ? (itemForm.width / 100) * (itemForm.height / 100) : 0, [itemForm]);
 
-  if (lc || lm) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
+  if (lc || lm || (isEditMode && loadingBudget)) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div><h2 className="text-2xl font-bold">Novo Orçamento</h2><p className="text-sm text-muted-foreground mt-0.5"><span className="font-mono font-semibold text-primary">{budgetNumber}</span> • Preencha as informações para gerar o orçamento</p></div>
+        <div>
+          <h2 className="text-2xl font-bold">{isEditMode ? "Editar Orçamento" : "Novo Orçamento"}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5"><span className="font-mono font-semibold text-primary">{budgetNumber}</span> • {isEditMode ? "Atualize as informações do orçamento" : "Preencha as informações para gerar o orçamento"}</p>
+        </div>
         <Button variant="outline" size="sm" onClick={() => navigate("/orcamentos")}><X className="h-4 w-4 mr-1.5" />Cancelar</Button>
       </div>
       <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-2">
@@ -195,8 +244,8 @@ export default function NewBudget() {
         <Button variant="outline" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}><ChevronLeft className="h-4 w-4 mr-1.5" />Voltar</Button>
         <div className="flex gap-2">
           {step < 3 ? <Button onClick={() => setStep(s => Math.min(3, s + 1))} disabled={!canProceed(step)}>Próximo<ChevronRight className="h-4 w-4 ml-1.5" /></Button> : (<>
-            <Button variant="outline" onClick={() => handleSave(true)} disabled={createBudget.isPending}><Save className="h-4 w-4 mr-1.5" />{createBudget.isPending ? "Salvando…" : "Salvar Rascunho"}</Button>
-            <Button onClick={() => handleSave(false)} disabled={createBudget.isPending} className="shadow-md shadow-primary/20"><Send className="h-4 w-4 mr-1.5" />{createBudget.isPending ? "Emitindo…" : "Emitir Orçamento"}</Button>
+            <Button variant="outline" onClick={() => handleSave(true)} disabled={isSaving}><Save className="h-4 w-4 mr-1.5" />{isSaving ? "Salvando…" : "Salvar Rascunho"}</Button>
+            <Button onClick={() => handleSave(false)} disabled={isSaving} className="shadow-md shadow-primary/20"><Send className="h-4 w-4 mr-1.5" />{isSaving ? (isEditMode ? "Atualizando…" : "Emitindo…") : (isEditMode ? "Atualizar Orçamento" : "Emitir Orçamento")}</Button>
           </>)}
         </div>
       </div>
