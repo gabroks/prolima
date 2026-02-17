@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
@@ -24,31 +25,33 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/clientes" element={<Clients />} />
-            <Route path="/clientes/:id" element={<ClientDetail />} />
-            <Route path="/fornecedores" element={<Suppliers />} />
-            <Route path="/materiais" element={<Materials />} />
-            <Route path="/novo-orcamento" element={<NewBudget />} />
-            <Route path="/orcamentos" element={<Budgets />} />
-            <Route path="/financeiro" element={<Financial />} />
-            <Route path="/despesas" element={<Expenses />} />
-            <Route path="/configuracoes" element={<SettingsPage />} />
-            <Route path="/backup" element={<Backup />} />
-            <Route path="/perfil" element={<Profile />} />
-            <Route path="/notificacoes" element={<Notifications />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/clientes" element={<Clients />} />
+              <Route path="/clientes/:id" element={<ClientDetail />} />
+              <Route path="/fornecedores" element={<Suppliers />} />
+              <Route path="/materiais" element={<Materials />} />
+              <Route path="/novo-orcamento" element={<NewBudget />} />
+              <Route path="/orcamentos" element={<Budgets />} />
+              <Route path="/financeiro" element={<Financial />} />
+              <Route path="/despesas" element={<Expenses />} />
+              <Route path="/configuracoes" element={<SettingsPage />} />
+              <Route path="/backup" element={<Backup />} />
+              <Route path="/perfil" element={<Profile />} />
+              <Route path="/notificacoes" element={<Notifications />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

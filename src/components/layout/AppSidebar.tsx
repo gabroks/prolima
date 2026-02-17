@@ -1,10 +1,10 @@
 import {
   LayoutDashboard, Users, Truck, Package, FilePlus, FileText,
   DollarSign, Receipt, Settings, Database, LogOut, Bell, Pencil,
-  ChevronRight, Shield,
+  ChevronRight, Shield, Moon, Sun,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -13,13 +13,17 @@ import {
 import { mockUser } from "@/data/mock";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getInitials } from "@/lib/formatters";
+import { useTheme } from "next-themes";
 
 interface MenuItem {
   title: string;
   url: string;
   icon: React.ElementType;
+  badge?: string;
 }
 
 const cadastroItems: MenuItem[] = [
@@ -68,7 +72,12 @@ function MenuGroup({ label, items, defaultOpen = false }: { label: string; items
                   <SidebarMenuButton asChild isActive={isRouteActive(item.url, location.pathname)}>
                     <NavLink to={item.url} end={item.url === "/"}>
                       <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <span className="flex-1">{item.title}</span>
+                      {item.badge && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-sidebar-primary/30 text-sidebar-primary ml-auto">
+                          {item.badge}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -83,7 +92,11 @@ function MenuGroup({ label, items, defaultOpen = false }: { label: string; items
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const initials = getInitials(mockUser.name);
+  const { theme, setTheme } = useTheme();
+
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   return (
     <Sidebar>
@@ -93,14 +106,30 @@ export function AppSidebar() {
           <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sidebar-primary to-sidebar-primary/70 flex items-center justify-center shadow-lg shadow-sidebar-primary/25">
             <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="text-base font-bold text-sidebar-foreground tracking-tight leading-tight">Pro Orçamento</h2>
             <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-[0.15em] font-medium">Gestão inteligente</p>
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-md hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">
+              {theme === "dark" ? "Modo claro" : "Modo escuro"}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* User card */}
-        <div className="flex items-center gap-2.5 rounded-lg bg-sidebar-accent/50 p-2.5 border border-sidebar-border/40 hover:bg-sidebar-accent/70 transition-colors">
+        <div
+          className="flex items-center gap-2.5 rounded-lg bg-sidebar-accent/50 p-2.5 border border-sidebar-border/40 hover:bg-sidebar-accent/70 transition-colors cursor-pointer"
+          onClick={() => navigate("/perfil")}
+        >
           <Avatar className="h-8 w-8 ring-2 ring-sidebar-primary/25 shrink-0">
             <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-[11px] font-bold">
               {initials}
@@ -110,22 +139,32 @@ export function AppSidebar() {
             <p className="text-sm font-medium text-sidebar-foreground truncate leading-tight">{mockUser.name.split(" ")[0]}</p>
             <p className="text-[11px] text-sidebar-foreground/45 truncate">{mockUser.email}</p>
           </div>
-          <div className="flex gap-0.5 shrink-0">
-            <NavLink
-              to="/notificacoes"
-              className="p-1.5 rounded-md hover:bg-sidebar-accent transition-colors relative"
-              activeClassName="bg-sidebar-accent text-sidebar-primary"
-            >
-              <Bell className="h-3.5 w-3.5" />
-              <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-sidebar-primary ring-1 ring-sidebar-background" />
-            </NavLink>
-            <NavLink
-              to="/perfil"
-              className="p-1.5 rounded-md hover:bg-sidebar-accent transition-colors"
-              activeClassName="bg-sidebar-accent text-sidebar-primary"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </NavLink>
+          <div className="flex gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to="/notificacoes"
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent transition-colors relative"
+                  activeClassName="bg-sidebar-accent text-sidebar-primary"
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-sidebar-primary ring-1 ring-sidebar-background animate-pulse" />
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">Notificações</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to="/perfil"
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-primary"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">Editar perfil</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -169,7 +208,10 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <button className="w-full text-sidebar-foreground/50 hover:text-destructive transition-colors">
+              <button
+                className="w-full text-sidebar-foreground/50 hover:text-destructive transition-colors"
+                onClick={() => navigate("/login")}
+              >
                 <LogOut className="h-4 w-4" />
                 <span>Sair do Sistema</span>
               </button>
