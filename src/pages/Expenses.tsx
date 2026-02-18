@@ -51,7 +51,18 @@ export default function Expenses() {
   const saldo = totalEntradas - totalDespesas;
   const avgExpense = expenses.length > 0 ? totalDespesas / expenses.length : 0;
 
-  // Suppliers that have expenses
+  // Month-over-month comparison
+  const monthComparison = useMemo(() => {
+    const now = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+    const curTotal = expenses.filter(e => e.date.startsWith(curMonth)).reduce((s, e) => s + Number(e.amount), 0);
+    const prevTotal = expenses.filter(e => e.date.startsWith(prevMonth)).reduce((s, e) => s + Number(e.amount), 0);
+    const curCount = expenses.filter(e => e.date.startsWith(curMonth)).length;
+    return { curTotal, prevTotal, curCount, diff: prevTotal > 0 ? ((curTotal - prevTotal) / prevTotal) * 100 : 0 };
+  }, [expenses]);
+
   const expenseSuppliers = useMemo(() => {
     const ids = new Set(expenses.map(e => e.supplier_id).filter(Boolean));
     return suppliers.filter(s => ids.has(s.id));
@@ -70,7 +81,6 @@ export default function Expenses() {
     return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).slice(-6).map(([key, total]) => ({ month: monthNames[parseInt(key.split("-")[1]) - 1], total }));
   }, [expenses]);
 
-  // Period boundaries
   const periodBounds = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -87,17 +97,15 @@ export default function Expenses() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let result = expenses.filter((e) => {
-      const matchSearch = !q || e.description.toLowerCase().includes(q) || (e.supplier_name?.toLowerCase().includes(q));
+      const matchSearch = !q || e.description.toLowerCase().includes(q) || (e.supplier_name?.toLowerCase().includes(q)) || (e.notes?.toLowerCase().includes(q)) || (e.budget_number?.includes(q));
       const matchBudget = budgetFilter === "all" || (budgetFilter === "none" ? !e.budget_id : e.budget_id === budgetFilter);
       const matchCategory = categoryFilter === "all" || e.category === categoryFilter;
       const matchSupplier = supplierFilter === "all" || (supplierFilter === "none" ? !e.supplier_id : e.supplier_id === supplierFilter);
-
       let matchPeriod = true;
       if (periodFilter === "this-month") matchPeriod = e.date >= periodBounds["this-month"];
       else if (periodFilter === "last-month") matchPeriod = e.date >= periodBounds["last-month"] && e.date <= periodBounds["last-month-end"];
       else if (periodFilter === "this-quarter") matchPeriod = e.date >= periodBounds["this-quarter"];
       else if (periodFilter === "this-year") matchPeriod = e.date >= periodBounds["this-year"];
-
       return matchSearch && matchBudget && matchCategory && matchSupplier && matchPeriod;
     });
     switch (sortBy) {
@@ -114,19 +122,21 @@ export default function Expenses() {
   const resetPage = () => setPage(0);
   const filteredTotal = filtered.reduce((s, e) => s + Number(e.amount), 0);
 
+  const activeFiltersCount = [categoryFilter !== "all", supplierFilter !== "all", budgetFilter !== "all", periodFilter !== "all", !!search].filter(Boolean).length;
+
+  const expenseToDelete = useMemo(() => {
+    if (!deleteId) return null;
+    return expenses.find(e => e.id === deleteId) || null;
+  }, [deleteId, expenses]);
+
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (e: DbExpense) => {
     setEditingId(e.id);
     setForm({
-      budgetId: e.budget_id || undefined,
-      budgetNumber: e.budget_number || undefined,
-      description: e.description,
-      supplierId: e.supplier_id || undefined,
-      supplierName: e.supplier_name || undefined,
-      category: e.category,
-      amount: Number(e.amount),
-      date: e.date,
-      notes: e.notes || undefined,
+      budgetId: e.budget_id || undefined, budgetNumber: e.budget_number || undefined,
+      description: e.description, supplierId: e.supplier_id || undefined,
+      supplierName: e.supplier_name || undefined, category: e.category,
+      amount: Number(e.amount), date: e.date, notes: e.notes || undefined,
     });
     setDialogOpen(true);
   };
@@ -137,28 +147,24 @@ export default function Expenses() {
     const budget = budgets.find((b) => b.id === form.budgetId);
     const supplier = suppliers.find((s) => s.id === form.supplierId);
     const fullForm: ExpenseForm = {
-      description: form.description!,
-      amount: form.amount!,
+      description: form.description!, amount: form.amount!,
       category: form.category || "Material",
       date: form.date || new Date().toISOString().split("T")[0],
-      budgetId: form.budgetId,
-      budgetNumber: budget?.number || form.budgetNumber,
-      supplierId: form.supplierId,
-      supplierName: supplier?.name || form.supplierName,
+      budgetId: form.budgetId, budgetNumber: budget?.number || form.budgetNumber,
+      supplierId: form.supplierId, supplierName: supplier?.name || form.supplierName,
       notes: form.notes,
     };
     const onSuccess = () => { setDialogOpen(false); setForm(emptyForm); setEditingId(null); };
-    if (editingId) {
-      updateExpense.mutate({ id: editingId, form: fullForm }, { onSuccess });
-    } else {
-      createExpense.mutate(fullForm, { onSuccess });
-    }
+    if (editingId) { updateExpense.mutate({ id: editingId, form: fullForm }, { onSuccess }); }
+    else { createExpense.mutate(fullForm, { onSuccess }); }
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
     deleteExpenseMut.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
+
+  const clearFilters = () => { setSearch(""); setCategoryFilter("all"); setSupplierFilter("all"); setBudgetFilter("all"); setPeriodFilter("all"); resetPage(); };
 
   const categoryBadgeVariant = (cat: string) => {
     switch (cat) {
@@ -173,9 +179,7 @@ export default function Expenses() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}
-        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}</div>
         <Skeleton className="h-64" />
       </div>
     );
@@ -186,26 +190,26 @@ export default function Expenses() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">Gestão de Despesas</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Controle e categorize seus gastos</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Controle e categorize seus gastos
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 text-primary font-medium">• {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""} ativo{activeFiltersCount > 1 ? "s" : ""}</span>
+            )}
+          </p>
         </div>
         <Button onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Nova Despesa
         </Button>
       </div>
 
-      <ExpenseSummaryCards totalEntradas={totalEntradas} totalDespesas={totalDespesas} saldo={saldo} avgExpense={avgExpense} />
+      <ExpenseSummaryCards totalEntradas={totalEntradas} totalDespesas={totalDespesas} saldo={saldo} avgExpense={avgExpense} monthComparison={monthComparison} />
       <ExpenseCharts categoryBreakdown={categoryBreakdown} monthlyTrend={monthlyTrend} />
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por descrição ou fornecedor…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-            className="pl-9"
-          />
+          <Input placeholder="Buscar descrição, fornecedor, notas, nº orçamento…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
         </div>
         <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
           <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
@@ -255,6 +259,11 @@ export default function Expenses() {
             <SelectItem value="amount-asc">Menor valor</SelectItem>
           </SelectContent>
         </Select>
+        {activeFiltersCount > 0 && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={clearFilters}>
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -277,12 +286,8 @@ export default function Expenses() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Receipt className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>
-                      {search || categoryFilter !== "all" || budgetFilter !== "all" || supplierFilter !== "all" || periodFilter !== "all"
-                        ? "Nenhuma despesa encontrada"
-                        : "Nenhuma despesa registrada"}
-                    </p>
-                    {!search && categoryFilter === "all" && budgetFilter === "all" && supplierFilter === "all" && periodFilter === "all" && (
+                    <p>{activeFiltersCount > 0 ? "Nenhuma despesa encontrada" : "Nenhuma despesa registrada"}</p>
+                    {activeFiltersCount === 0 && (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Registrar primeira despesa
                       </Button>
@@ -300,6 +305,7 @@ export default function Expenses() {
                       </Avatar>
                       <div>
                         <p className="font-medium">{e.description}</p>
+                        {e.notes && <p className="text-xs text-muted-foreground truncate max-w-[180px]">{e.notes}</p>}
                         <div className="flex items-center gap-2 mt-0.5 sm:hidden">
                           <Badge variant={categoryBadgeVariant(e.category)} className="text-[10px] h-5">{e.category}</Badge>
                           <span className="text-[10px] text-muted-foreground">{formatDate(e.date)}</span>
@@ -333,12 +339,20 @@ export default function Expenses() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} despesas
-          {categoryFilter !== "all" && <> • <span className="font-medium text-foreground">{categoryFilter}</span></>}
-          {supplierFilter !== "all" && supplierFilter !== "none" && <> • <span className="font-medium text-foreground">{expenseSuppliers.find(s => s.id === supplierFilter)?.name}</span></>}
-          {periodFilter !== "all" && <> • <span className="font-medium text-foreground">{periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"}</span></>}
-        </span>
+          {activeFiltersCount > 0 && (
+            <> • Filtros: {[
+              categoryFilter !== "all" && categoryFilter,
+              supplierFilter !== "all" && supplierFilter !== "none" && expenseSuppliers.find(s => s.id === supplierFilter)?.name,
+              supplierFilter === "none" && "Sem fornecedor",
+              periodFilter !== "all" && (periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"),
+              budgetFilter !== "all" && budgetFilter !== "none" && `Orç. ${budgets.find(b => b.id === budgetFilter)?.number}`,
+              budgetFilter === "none" && "Sem orçamento",
+              search && `"${search}"`,
+            ].filter(Boolean).join(", ")}</>
+          )}
+        </p>
         <div className="flex items-center gap-3">
           <span className="text-xs font-semibold text-destructive tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span>
           {totalPages > 1 && (
@@ -363,28 +377,24 @@ export default function Expenses() {
         isSaving={createExpense.isPending || updateExpense.isPending}
       />
 
-      {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
             <AlertDialogDescription>
-              {(() => {
-                const expense = deleteId ? expenses.find(e => e.id === deleteId) : null;
-                if (expense) {
-                  return `"${expense.description}" — ${formatCurrency(Number(expense.amount))}. Esta ação não pode ser desfeita.`;
-                }
-                return "Esta ação não pode ser desfeita.";
-              })()}
+              {expenseToDelete && (
+                <span className="block mb-2 font-medium text-foreground">
+                  "{expenseToDelete.description}" — {formatCurrency(Number(expenseToDelete.amount))}
+                  {expenseToDelete.supplier_name && ` • ${expenseToDelete.supplier_name}`}
+                  {expenseToDelete.budget_number && ` • Orç. ${expenseToDelete.budget_number}`}
+                </span>
+              )}
+              Esta ação não pode ser desfeita. A despesa será removida permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteExpenseMut.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} disabled={deleteExpenseMut.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleteExpenseMut.isPending ? "Excluindo…" : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
