@@ -22,7 +22,10 @@ export function FinancialSummaryCards({ totalApproved, totalReceived, balance, p
       {cards.map(c => (
         <Card key={c.label} className="p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+              c.label === "Lucro Líquido" ? (profit >= 0 ? "bg-primary/10" : "bg-destructive/10") :
+              c.label === "A Receber" && balance > 0 ? "bg-yellow-500/10" : "bg-primary/10"
+            }`}>
               <c.icon className={`h-5 w-5 ${c.color}`} />
             </div>
             <div className="min-w-0">
