@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Shield, Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { getPasswordStrength } from "@/lib/passwordStrength";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -17,14 +19,14 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
 
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
+
   useEffect(() => {
-    // Check for recovery token in URL hash
     const hash = window.location.hash;
     if (hash.includes("type=recovery")) {
       setIsRecovery(true);
     }
 
-    // Listen for PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
@@ -57,7 +59,7 @@ export default function ResetPassword() {
   if (!isRecovery && !success) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-muted/40">
-        <div className="w-full max-w-sm text-center space-y-4">
+        <div className="w-full max-w-sm text-center space-y-4 animate-fade-in">
           <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center mx-auto">
             <Shield className="h-6 w-6 text-destructive" />
           </div>
@@ -72,7 +74,7 @@ export default function ResetPassword() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-muted/40">
-        <div className="w-full max-w-sm text-center space-y-4">
+        <div className="w-full max-w-sm text-center space-y-4 animate-fade-in">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
             <CheckCircle2 className="h-6 w-6 text-primary" />
           </div>
@@ -85,7 +87,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-muted/40">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm animate-fade-in">
         <div className="flex items-center gap-2.5 mb-8">
           <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
             <Shield className="h-5 w-5 text-primary-foreground" />
@@ -102,30 +104,48 @@ export default function ResetPassword() {
           <CardContent className="pt-6">
             <form onSubmit={handleReset} className="space-y-5">
               <div className="space-y-2">
-                <Label>Nova Senha</Label>
+                <Label htmlFor="new-password">Nova Senha</Label>
                 <div className="relative">
                   <Input
+                    id="new-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="h-11 pr-10"
                     autoComplete="new-password"
+                    aria-required="true"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {password.length > 0 && (
+                  <PasswordStrengthIndicator strength={passwordStrength} />
+                )}
               </div>
               <div className="space-y-2">
-                <Label>Confirmar Nova Senha</Label>
-                <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-11" autoComplete="new-password" />
+                <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  className="h-11"
+                  autoComplete="new-password"
+                  aria-required="true"
+                />
                 {confirm && (
-                  <p className={`text-xs ${password === confirm ? "text-primary" : "text-destructive"}`}>
+                  <p className={`text-xs font-medium ${password === confirm ? "text-primary" : "text-destructive"}`}>
                     {password === confirm ? "✓ Senhas conferem" : "✗ Senhas não conferem"}
                   </p>
                 )}
               </div>
-              <Button type="submit" className="w-full h-11 font-semibold shadow-md shadow-primary/20" disabled={loading}>
+              <Button type="submit" className="w-full h-11 font-semibold shadow-md shadow-primary/20" disabled={loading || (!!confirm && password !== confirm)}>
                 {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Redefinindo…</> : "Redefinir Senha"}
               </Button>
             </form>
