@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -156,9 +157,16 @@ export function AppLayout() {
           </header>
 
           <div className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-auto bg-muted/30">
-            <div className="animate-fade-in">
-              <Outlet />
-            </div>
+            <Suspense fallback={
+              <div className="space-y-4 animate-pulse">
+                <div className="h-8 w-48 bg-muted rounded" />
+                <div className="h-64 w-full bg-muted rounded-xl" />
+              </div>
+            }>
+              <div className="animate-fade-in">
+                <Outlet />
+              </div>
+            </Suspense>
           </div>
         </main>
       </div>
