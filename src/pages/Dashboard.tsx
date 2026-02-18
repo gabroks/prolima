@@ -7,7 +7,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
-import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays } from "lucide-react";
+import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -85,11 +85,17 @@ export default function Dashboard() {
   const activeClients = clients.filter((c) => c.status === "active").length;
   const activeSuppliers = suppliers.filter((s) => s.active).length;
 
+  // Material categories count
+  const materialCategories = useMemo(() => {
+    const cats = new Set(materials.map(m => m.category));
+    return cats.size;
+  }, [materials]);
+
   const summaryCards = [
     { title: "Clientes", value: clients.length, subtitle: `${activeClients} ativo${activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
     { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovado${approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
-    { title: "Fornecedores", value: suppliers.length, subtitle: `${activeSuppliers} ativo${activeSuppliers !== 1 ? "s" : ""}`, icon: Package, trend: null, trendUp: true, href: "/fornecedores" },
-    { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro" },
+    { title: "Materiais", value: materials.length, subtitle: `${materialCategories} categoria${materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
+    { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro", negative: monthSaldo < 0 },
   ];
 
   if (isLoading) {
