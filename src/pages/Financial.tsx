@@ -374,6 +374,7 @@ export default function Financial() {
         onSave={handleSave}
         editingId={editingId}
         approvedBudgets={approvedBudgets}
+        payments={payments}
         isSaving={createPayment.isPending || updatePayment.isPending}
       />
 
