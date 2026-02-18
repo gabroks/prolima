@@ -109,8 +109,7 @@ export default function Clients() {
 
   const handleDelete = () => {
     if (!deleteId) return;
-    deleteClient.mutate(deleteId);
-    setDeleteId(null);
+    deleteClient.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
 
   const handleToggleStatus = (id: string, currentStatus: string, e: React.MouseEvent) => {
@@ -309,7 +308,7 @@ export default function Clients() {
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs text-muted-foreground">
-          Exibindo {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} clientes
+          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} clientes
           {(statusFilter !== "all" || typeFilter !== "all") && (
             <> • Filtros ativos: {[
               statusFilter !== "all" && (statusFilter === "active" ? "Ativos" : "Inativos"),
