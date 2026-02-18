@@ -7,11 +7,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, MaterialForm, DbMaterial } from "@/hooks/useMaterials";
+import { useBudgets } from "@/hooks/useBudgets";
 import { QuotaButton } from "@/components/QuotaButton";
 import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
-import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, Tag, DollarSign, Layers } from "lucide-react";
-import { formatCurrency } from "@/lib/formatters";
+import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, DollarSign, Layers, ClipboardList } from "lucide-react";
+import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 
 type SortKey = "name" | "price-asc" | "price-desc" | "category";
@@ -21,6 +23,7 @@ const emptyForm: MaterialForm = { name: "", category: "", chargeUnit: "m²", mea
 
 export default function Materials() {
   const { data: materials = [], isLoading } = useMaterials();
+  const { data: budgets = [] } = useBudgets();
   const createMaterial = useCreateMaterial();
   const updateMaterial = useUpdateMaterial();
   const deleteMaterial = useDeleteMaterial();
@@ -62,7 +65,28 @@ export default function Materials() {
   const resetPage = () => setPage(0);
 
   const avgPrice = materials.length > 0 ? materials.reduce((s, m) => s + m.base_price, 0) / materials.length : 0;
-  const maxPrice = materials.length > 0 ? Math.max(...materials.map(m => m.base_price)) : 0;
+
+  // Material usage stats from budget_items
+  const materialUsageStats = useMemo(() => {
+    const map = new Map<string, { budgetCount: number; itemCount: number }>();
+    budgets.forEach(b => {
+      const items = (b as any).budget_items || [];
+      const seenInBudget = new Set<string>();
+      items.forEach((item: any) => {
+        if (item.material_id) {
+          const prev = map.get(item.material_id) || { budgetCount: 0, itemCount: 0 };
+          prev.itemCount++;
+          if (!seenInBudget.has(item.material_id)) {
+            prev.budgetCount++;
+            seenInBudget.add(item.material_id);
+          }
+          map.set(item.material_id, prev);
+        }
+      });
+    });
+    return map;
+  }, [budgets]);
+  const materialsInUse = new Set(materialUsageStats.keys()).size;
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (m: DbMaterial) => {
@@ -123,7 +147,7 @@ export default function Materials() {
           { label: "Total", value: materials.length, icon: Package },
           { label: "Categorias", value: categories.length, icon: Layers },
           { label: "Preço Médio", value: formatCurrency(avgPrice), icon: DollarSign },
-          { label: "Maior Preço", value: formatCurrency(maxPrice), icon: Tag },
+          { label: "Em Uso", value: materialsInUse, icon: ClipboardList },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center gap-3">
@@ -176,6 +200,7 @@ export default function Materials() {
                 <TableHead className="hidden sm:table-cell">Categoria</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead className="hidden md:table-cell">Medida</TableHead>
+                <TableHead className="hidden lg:table-cell">Uso</TableHead>
                 <TableHead>Preço Base</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -183,7 +208,7 @@ export default function Materials() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || categoryFilter !== "all" ? "Nenhum material encontrado" : "Nenhum material cadastrado"}</p>
                     {!search && categoryFilter === "all" && (
@@ -193,13 +218,22 @@ export default function Materials() {
                     )}
                   </TableCell>
                 </TableRow>
-              ) : paged.map((m) => (
+              ) : paged.map((m) => {
+                const usage = materialUsageStats.get(m.id);
+                return (
                 <TableRow key={m.id} className="group">
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{m.name}</p>
-                      {m.notes && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{m.notes}</p>}
-                      <p className="text-xs text-muted-foreground sm:hidden mt-0.5">{m.category}</p>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {getInitials(m.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{m.name}</p>
+                        {m.notes && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{m.notes}</p>}
+                        <p className="text-xs text-muted-foreground sm:hidden mt-0.5">{m.category}</p>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
@@ -207,6 +241,14 @@ export default function Materials() {
                   </TableCell>
                   <TableCell className="text-sm">{m.charge_unit}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm">{m.measure_unit}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {usage ? (
+                      <div>
+                        <span className="text-sm font-semibold tabular-nums">{usage.budgetCount}</span>
+                        <p className="text-[10px] text-muted-foreground">orçamento{usage.budgetCount !== 1 ? "s" : ""}</p>
+                      </div>
+                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                  </TableCell>
                   <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(m.base_price)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -219,7 +261,7 @@ export default function Materials() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              );})}
             </TableBody>
           </Table>
         </CardContent>
@@ -254,7 +296,15 @@ export default function Materials() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir material?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita. O material será removido do catálogo.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {(() => {
+                const usage = deleteId ? materialUsageStats.get(deleteId) : null;
+                if (usage && usage.budgetCount > 0) {
+                  return `⚠️ Este material está sendo usado em ${usage.budgetCount} orçamento${usage.budgetCount !== 1 ? "s" : ""} (${usage.itemCount} item${usage.itemCount !== 1 ? "ns" : ""}). A exclusão é permanente e não pode ser desfeita.`;
+                }
+                return "Esta ação não pode ser desfeita. O material será removido do catálogo.";
+              })()}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
