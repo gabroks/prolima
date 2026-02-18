@@ -9,7 +9,10 @@ export function useUnreadNotificationCount() {
   return useQuery({
     queryKey: ["notifications", "unread_count"],
     queryFn: async () => {
-      const { count, error } = await supabase.from("notifications").select("*", { count: "exact", head: true }).eq("read", false);
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("read", false);
       if (error) throw error;
       return count ?? 0;
     },
@@ -21,10 +24,28 @@ export function useNotifications() {
   return useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("notifications").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data as DbNotification[];
     },
+  });
+}
+
+export function useCreateNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (message: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { error } = await supabase
+        .from("notifications")
+        .insert({ message, user_id: user.id });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 }
 
@@ -46,7 +67,10 @@ export function useMarkAllNotificationsRead() {
       const { error } = await supabase.from("notifications").update({ read: true }).eq("read", false);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success("Todas marcadas como lidas"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Todas marcadas como lidas");
+    },
   });
 }
 
@@ -57,7 +81,10 @@ export function useDeleteNotification() {
       const { error } = await supabase.from("notifications").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success("Notificação removida"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Notificação removida");
+    },
   });
 }
 
@@ -65,9 +92,15 @@ export function useClearAllNotifications() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("notifications").delete().gte("id", "00000000-0000-0000-0000-000000000000");
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .gte("id", "00000000-0000-0000-0000-000000000000");
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success("Todas as notificações removidas"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Todas as notificações removidas");
+    },
   });
 }
