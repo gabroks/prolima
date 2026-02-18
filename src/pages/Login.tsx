@@ -25,6 +25,8 @@ export default function Login() {
   const { user, signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -59,20 +61,23 @@ export default function Login() {
       toast.error("Preencha todos os campos");
       return;
     }
-    if (isSignUp && password.length < 6) {
-      toast.error("A senha deve ter no mínimo 6 caracteres");
-      return;
+    if (isSignUp) {
+      if (!name.trim()) { toast.error("Informe seu nome"); return; }
+      if (password.length < 6) { toast.error("A senha deve ter no mínimo 6 caracteres"); return; }
+      if (password !== confirmPassword) { toast.error("As senhas não conferem"); return; }
     }
 
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await signUp(email, password);
+        const { error } = await signUp(email, password, name.trim());
         if (error) {
           toast.error(error.message);
         } else {
           toast.success("Conta criada! Verifique seu e-mail para confirmar o cadastro.");
           setIsSignUp(false);
+          setName("");
+          setConfirmPassword("");
         }
       } else {
         const { error } = await signIn(email, password);
@@ -94,6 +99,8 @@ export default function Login() {
   const switchMode = () => {
     setIsSignUp(!isSignUp);
     setPassword("");
+    setConfirmPassword("");
+    setName("");
   };
 
   if (user) return <Navigate to="/" replace />;
@@ -159,6 +166,22 @@ export default function Login() {
           <Card className="shadow-xl shadow-black/5 border-0">
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-5">
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-sm font-medium">Nome completo</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Seu nome completo"
+                      className="h-11"
+                      autoComplete="name"
+                      autoFocus
+                      aria-required="true"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">E-mail</Label>
                   <Input
@@ -169,7 +192,7 @@ export default function Login() {
                     placeholder="seu@email.com"
                     className="h-11"
                     autoComplete="email"
-                    autoFocus
+                    autoFocus={!isSignUp}
                     aria-required="true"
                   />
                 </div>
@@ -210,6 +233,25 @@ export default function Login() {
                     <PasswordStrengthIndicator strength={passwordStrength} />
                   )}
                 </div>
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-sm font-medium">Confirmar Senha</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="h-11"
+                      autoComplete="new-password"
+                      aria-required="true"
+                    />
+                    {confirmPassword && (
+                      <p className={`text-xs font-medium ${password === confirmPassword ? "text-primary" : "text-destructive"}`}>
+                        {password === confirmPassword ? "✓ Senhas conferem" : "✗ Senhas não conferem"}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <Button type="submit" className="w-full h-11 text-sm font-semibold shadow-md shadow-primary/20 group" disabled={loading}>
                   {loading ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSignUp ? "Criando…" : "Entrando…"}</>
