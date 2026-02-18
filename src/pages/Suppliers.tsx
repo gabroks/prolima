@@ -36,6 +36,7 @@ export default function Suppliers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,13 +44,21 @@ export default function Suppliers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<SupplierForm>(emptyForm);
 
+  // Available cities
+  const availableCities = useMemo(() => {
+    const cities = new Set<string>();
+    suppliers.forEach(s => { if (s.city) cities.add(s.city); });
+    return Array.from(cities).sort();
+  }, [suppliers]);
+
   const filtered = useMemo(() => {
     let result = suppliers.filter((s) => {
       const q = search.toLowerCase();
       const matchSearch = !q || s.name.toLowerCase().includes(q) || (s.document?.includes(q)) || (s.phone?.includes(q)) || (s.city?.toLowerCase().includes(q)) || (s.email?.toLowerCase().includes(q));
       const matchStatus = statusFilter === "all" || (statusFilter === "active" ? s.active : !s.active);
       const matchType = typeFilter === "all" || s.person_type === typeFilter;
-      return matchSearch && matchStatus && matchType;
+      const matchCity = cityFilter === "all" || s.city === cityFilter;
+      return matchSearch && matchStatus && matchType && matchCity;
     });
 
     switch (sortBy) {
@@ -58,13 +67,14 @@ export default function Suppliers() {
       case "status": result.sort((a, b) => Number(b.active) - Number(a.active)); break;
     }
     return result;
-  }, [suppliers, search, statusFilter, typeFilter, sortBy]);
+  }, [suppliers, search, statusFilter, typeFilter, cityFilter, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
   const resetPage = () => setPage(0);
 
   const activeCount = suppliers.filter(s => s.active).length;
+  const inactiveCount = suppliers.length - activeCount;
 
   const supplierExpenseStats = useMemo(() => {
     const map = new Map<string, { total: number; count: number }>();
@@ -82,7 +92,7 @@ export default function Suppliers() {
   const totalExpenseCount = Array.from(supplierExpenseStats.values()).reduce((s, v) => s + v.count, 0);
   const pjCount = suppliers.filter(s => s.person_type === "juridica").length;
 
-  const formatWhatsApp = (phone: string) => `https://wa.me/55${phone.replace(/\\D/g, "")}`;
+  const formatWhatsApp = (phone: string) => `https://wa.me/55${phone.replace(/\D/g, "")}`;
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (s: DbSupplier) => {
@@ -116,6 +126,15 @@ export default function Suppliers() {
     toggleActive.mutate({ id: s.id, currentActive: s.active });
   };
 
+  // Delete dialog: find supplier info
+  const supplierToDelete = useMemo(() => {
+    if (!deleteId) return null;
+    return suppliers.find(s => s.id === deleteId) || null;
+  }, [deleteId, suppliers]);
+
+  // Active filters count
+  const activeFiltersCount = [statusFilter !== "all", typeFilter !== "all", cityFilter !== "all", !!search].filter(Boolean).length;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -133,7 +152,12 @@ export default function Suppliers() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">Fornecedores</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie seus fornecedores e contatos</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gerencie seus fornecedores e contatos
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 text-primary font-medium">• {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""} ativo{activeFiltersCount > 1 ? "s" : ""}</span>
+            )}
+          </p>
         </div>
         <QuotaButton resource="suppliers" onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Novo Fornecedor
@@ -143,19 +167,22 @@ export default function Suppliers() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: String(suppliers.length), icon: Truck, color: "text-primary" },
-          { label: "Ativos", value: String(activeCount), icon: CheckCircle, color: "text-primary" },
-          { label: "Despesas", value: String(totalExpenseCount), icon: Receipt, color: "text-primary" },
-          { label: "Total Gasto", value: formatCurrency(totalSupplierExpenses), icon: DollarSign, color: "text-primary" },
+          { label: "Total", value: String(suppliers.length), icon: Truck, bgColor: "bg-primary/10", iconColor: "text-primary" },
+          { label: "Ativos", value: String(activeCount), icon: CheckCircle, bgColor: "bg-primary/10", iconColor: "text-primary", extra: inactiveCount > 0 ? `${inactiveCount} inativo${inactiveCount > 1 ? "s" : ""}` : null },
+          { label: "Despesas", value: String(totalExpenseCount), icon: Receipt, bgColor: totalExpenseCount > 0 ? "bg-destructive/10" : "bg-muted", iconColor: totalExpenseCount > 0 ? "text-destructive" : "text-muted-foreground" },
+          { label: "Total Gasto", value: formatCurrency(totalSupplierExpenses), icon: DollarSign, bgColor: totalSupplierExpenses > 0 ? "bg-destructive/10" : "bg-muted", iconColor: totalSupplierExpenses > 0 ? "text-destructive" : "text-muted-foreground" },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
+              <div className={`h-10 w-10 rounded-lg ${s.bgColor} flex items-center justify-center`}>
+                <s.icon className={`h-5 w-5 ${s.iconColor}`} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-lg font-bold tabular-nums">{s.value}</p>
+                <p className="text-lg font-bold tabular-nums truncate">{s.value}</p>
+                {"extra" in s && s.extra && (
+                  <p className="text-[10px] text-muted-foreground">{s.extra}</p>
+                )}
               </div>
             </div>
           </Card>
@@ -184,6 +211,20 @@ export default function Suppliers() {
             <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
           </SelectContent>
         </Select>
+        {availableCities.length > 0 && (
+          <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-[160px]">
+              <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Cidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas cidades</SelectItem>
+              {availableCities.map(city => (
+                <SelectItem key={city} value={city}>{city}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
           <SelectTrigger className="w-[140px]">
             <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
@@ -195,6 +236,11 @@ export default function Suppliers() {
             <SelectItem value="status">Status</SelectItem>
           </SelectContent>
         </Select>
+        {activeFiltersCount > 0 && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); resetPage(); }}>
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -216,8 +262,8 @@ export default function Suppliers() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{search || statusFilter !== "all" ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}</p>
-                    {!search && statusFilter === "all" && (
+                    <p>{activeFiltersCount > 0 ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}</p>
+                    {activeFiltersCount === 0 && (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro fornecedor
                       </Button>
@@ -269,9 +315,9 @@ export default function Suppliers() {
                   <TableCell className="hidden lg:table-cell">
                     {s.city ? (
                       <span className="text-sm flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />{s.city}
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />{s.city}{s.neighborhood ? `, ${s.neighborhood}` : ""}
                       </span>
-                    ) : "—"}
+                    ) : <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {(() => {
@@ -279,7 +325,7 @@ export default function Suppliers() {
                       if (!stats) return <span className="text-muted-foreground text-xs">—</span>;
                       return (
                         <div>
-                          <span className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(stats.total)}</span>
+                          <span className="text-sm font-semibold tabular-nums text-destructive">{formatCurrency(stats.total)}</span>
                           <p className="text-[10px] text-muted-foreground">{stats.count} despesa{stats.count !== 1 ? "s" : ""}</p>
                         </div>
                       );
@@ -326,7 +372,14 @@ export default function Suppliers() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs text-muted-foreground">
           Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} fornecedores
-          {statusFilter !== "all" && <> • Filtro: <span className="font-medium text-foreground">{statusFilter === "active" ? "Ativos" : "Inativos"}</span></>}
+          {activeFiltersCount > 0 && (
+            <> • Filtros: {[
+              statusFilter !== "all" && (statusFilter === "active" ? "Ativos" : "Inativos"),
+              typeFilter !== "all" && (typeFilter === "fisica" ? "PF" : "PJ"),
+              cityFilter !== "all" && cityFilter,
+              search && `"${search}"`,
+            ].filter(Boolean).join(", ")}</>
+          )}
         </p>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
@@ -407,6 +460,11 @@ export default function Suppliers() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir fornecedor?</AlertDialogTitle>
             <AlertDialogDescription>
+              {supplierToDelete && (
+                <span className="block mb-2 font-medium text-foreground">
+                  "{supplierToDelete.name}"{supplierToDelete.document ? ` — ${supplierToDelete.document}` : ""}
+                </span>
+              )}
               {(() => {
                 const stats = deleteId ? supplierExpenseStats.get(deleteId) : null;
                 if (stats && stats.count > 0) {
