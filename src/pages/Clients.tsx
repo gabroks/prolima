@@ -53,12 +53,20 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ClientForm>(emptyForm);
+
+  // Available cities for filter
+  const availableCities = useMemo(() => {
+    const cities = new Set<string>();
+    clients.forEach(c => { if (c.city) cities.add(c.city); });
+    return Array.from(cities).sort();
+  }, [clients]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -70,7 +78,8 @@ export default function Clients() {
         c.razao_social?.toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || c.status === statusFilter;
       const matchType = typeFilter === "all" || c.person_type === typeFilter;
-      return matchSearch && matchStatus && matchType;
+      const matchCity = cityFilter === "all" || c.city === cityFilter;
+      return matchSearch && matchStatus && matchType && matchCity;
     });
 
     switch (sortBy) {
@@ -80,15 +89,15 @@ export default function Clients() {
       case "city": result.sort((a, b) => (a.city || "").localeCompare(b.city || "")); break;
     }
     return result;
-  }, [clients, search, statusFilter, typeFilter, sortBy]);
+  }, [clients, search, statusFilter, typeFilter, cityFilter, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
 
-  // Reset page when filters change
   const resetPage = () => setPage(0);
 
   const activeCount = clients.filter(c => c.status === "active").length;
+  const inactiveCount = clients.length - activeCount;
   const pjCount = clients.filter(c => c.person_type === "juridica").length;
   const totalBudgetValue = useMemo(() => budgets.reduce((s, b) => s + Number(b.total), 0), [budgets]);
 
@@ -141,6 +150,15 @@ export default function Clients() {
 
   const updateField = (field: keyof ClientForm, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // Delete dialog: find client info
+  const clientToDelete = useMemo(() => {
+    if (!deleteId) return null;
+    return clients.find(c => c.id === deleteId) || null;
+  }, [deleteId, clients]);
+
+  // Active filters count
+  const activeFiltersCount = [statusFilter !== "all", typeFilter !== "all", cityFilter !== "all", !!search].filter(Boolean).length;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -158,7 +176,12 @@ export default function Clients() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">Clientes</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie sua carteira de clientes</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gerencie sua carteira de clientes
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 text-primary font-medium">• {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""} ativo{activeFiltersCount > 1 ? "s" : ""}</span>
+            )}
+          </p>
         </div>
         <QuotaButton resource="clients" onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Novo Cliente
@@ -168,19 +191,22 @@ export default function Clients() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: String(clients.length), icon: Users, color: "text-primary" },
-          { label: "Ativos", value: String(activeCount), icon: UserCheck, color: "text-primary" },
-          { label: "Pessoa Jurídica", value: String(pjCount), icon: Building2, color: "text-primary" },
-          { label: "Valor Gerado", value: formatCurrency(totalBudgetValue), icon: DollarSign, color: "text-primary" },
+          { label: "Total", value: String(clients.length), icon: Users, bgColor: "bg-primary/10", iconColor: "text-primary" },
+          { label: "Ativos", value: String(activeCount), icon: UserCheck, bgColor: "bg-primary/10", iconColor: "text-primary", extra: inactiveCount > 0 ? `${inactiveCount} inativo${inactiveCount > 1 ? "s" : ""}` : null },
+          { label: "Pessoa Jurídica", value: String(pjCount), icon: Building2, bgColor: "bg-primary/10", iconColor: "text-primary", extra: clients.length > 0 ? `${Math.round((pjCount / clients.length) * 100)}%` : null },
+          { label: "Valor Gerado", value: formatCurrency(totalBudgetValue), icon: DollarSign, bgColor: totalBudgetValue > 0 ? "bg-primary/10" : "bg-muted", iconColor: totalBudgetValue > 0 ? "text-primary" : "text-muted-foreground" },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
+              <div className={`h-10 w-10 rounded-lg ${s.bgColor} flex items-center justify-center`}>
+                <s.icon className={`h-5 w-5 ${s.iconColor}`} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-lg font-bold tabular-nums">{s.value}</p>
+                <p className="text-lg font-bold tabular-nums truncate">{s.value}</p>
+                {"extra" in s && s.extra && (
+                  <p className="text-[10px] text-muted-foreground">{s.extra}</p>
+                )}
               </div>
             </div>
           </Card>
@@ -209,6 +235,20 @@ export default function Clients() {
             <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
           </SelectContent>
         </Select>
+        {availableCities.length > 0 && (
+          <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-[160px]">
+              <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Cidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas cidades</SelectItem>
+              {availableCities.map(city => (
+                <SelectItem key={city} value={city}>{city}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
           <SelectTrigger className="w-[150px]">
             <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
@@ -221,6 +261,11 @@ export default function Clients() {
             <SelectItem value="city">Cidade</SelectItem>
           </SelectContent>
         </Select>
+        {activeFiltersCount > 0 && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); resetPage(); }}>
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -242,8 +287,8 @@ export default function Clients() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{search || statusFilter !== "all" || typeFilter !== "all" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</p>
-                    {!search && statusFilter === "all" && typeFilter === "all" && (
+                    <p>{search || statusFilter !== "all" || typeFilter !== "all" || cityFilter !== "all" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</p>
+                    {!search && statusFilter === "all" && typeFilter === "all" && cityFilter === "all" && (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro cliente
                       </Button>
@@ -353,10 +398,12 @@ export default function Clients() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs text-muted-foreground">
           Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} clientes
-          {(statusFilter !== "all" || typeFilter !== "all") && (
-            <> • Filtros ativos: {[
+          {activeFiltersCount > 0 && (
+            <> • Filtros: {[
               statusFilter !== "all" && (statusFilter === "active" ? "Ativos" : "Inativos"),
               typeFilter !== "all" && (typeFilter === "fisica" ? "PF" : "PJ"),
+              cityFilter !== "all" && cityFilter,
+              search && `"${search}"`,
             ].filter(Boolean).join(", ")}</>
           )}
         </p>
@@ -445,6 +492,11 @@ export default function Clients() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
             <AlertDialogDescription>
+              {clientToDelete && (
+                <span className="block mb-2 font-medium text-foreground">
+                  "{clientToDelete.name}" — {clientToDelete.document}
+                </span>
+              )}
               {(() => {
                 const stats = deleteId ? clientStats.get(deleteId) : null;
                 if (stats && stats.count > 0) {
