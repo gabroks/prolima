@@ -22,7 +22,7 @@ const CATEGORIES = ["Material", "Serviço", "Fixo", "Transporte", "Alimentação
 
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 const PAGE_SIZE = 15;
-const emptyForm: Partial<ExpenseForm> = { category: "Material" };
+const emptyForm: Partial<ExpenseForm> = { category: "Material", date: new Date().toISOString().split("T")[0] };
 
 export default function Expenses() {
   const { data: expenses = [], isLoading } = useExpenses();
@@ -140,7 +140,7 @@ export default function Expenses() {
             <TableCell className="hidden md:table-cell font-mono text-xs">{e.budget_number || "—"}</TableCell>
             <TableCell className="hidden lg:table-cell text-sm">{formatDate(e.date)}</TableCell>
             <TableCell className="tabular-nums font-semibold text-destructive">{formatCurrency(Number(e.amount))}</TableCell>
-            <TableCell className="text-right"><div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell>
+            <TableCell className="text-right"><div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell>
           </TableRow>
         ))}
       </TableBody></Table></CardContent></Card>
