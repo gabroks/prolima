@@ -15,6 +15,7 @@ import { usePayments } from "@/hooks/usePayments";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
   ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2, Download, Pencil,
+  ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { downloadBudgetPdf } from "@/lib/generateBudgetPdf";
 
 type SortKey = "date-desc" | "date-asc" | "value-desc" | "value-asc" | "client" | "number";
+const PAGE_SIZE = 15;
 
 export default function Budgets() {
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ export default function Budgets() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let result = budgets.filter((b) => {
-      const matchSearch = !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q) || b.service_description?.toLowerCase().includes(q);
+      const matchSearch = !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q) || b.service_description?.toLowerCase().includes(q) || b.general_notes?.toLowerCase().includes(q) || b.payment_terms?.toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || b.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -59,7 +61,6 @@ export default function Budgets() {
     return result;
   }, [budgets, search, statusFilter, sortBy]);
 
-  const PAGE_SIZE = 15;
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
   const resetPage = () => setPage(0);
@@ -75,11 +76,35 @@ export default function Budgets() {
   const approvedValue = budgets.filter(b => b.status === "approved").reduce((s, b) => s + Number(b.total), 0);
   const conversionRate = budgets.length > 0 ? Math.round((counts.approved / budgets.length) * 100) : 0;
 
+  // Month-over-month comparison
+  const monthComparison = useMemo(() => {
+    const now = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+    const curCount = budgets.filter(b => b.created_at.startsWith(curMonth)).length;
+    const prevCount = budgets.filter(b => b.created_at.startsWith(prevMonth)).length;
+    const curValue = budgets.filter(b => b.created_at.startsWith(curMonth)).reduce((s, b) => s + Number(b.total), 0);
+    const prevValue = budgets.filter(b => b.created_at.startsWith(prevMonth)).reduce((s, b) => s + Number(b.total), 0);
+    return {
+      curCount, prevCount, curValue, prevValue,
+      countDiff: curCount - prevCount,
+      valueDiff: prevValue > 0 ? ((curValue - prevValue) / prevValue) * 100 : 0,
+    };
+  }, [budgets]);
+
   const paymentsMap = useMemo(() => {
     const map: Record<string, number> = {};
     payments.forEach(p => { if (p.budget_id) map[p.budget_id] = (map[p.budget_id] || 0) + Number(p.amount); });
     return map;
   }, [payments]);
+
+  const activeFiltersCount = [statusFilter !== "all", !!search].filter(Boolean).length;
+
+  const budgetToDelete = useMemo(() => {
+    if (!deleteId) return null;
+    return budgets.find(b => b.id === deleteId) || null;
+  }, [deleteId, budgets]);
 
   const changeStatus = (id: string, newStatus: BudgetStatus) => {
     updateStatus.mutate({ id, status: newStatus });
@@ -99,65 +124,183 @@ export default function Budgets() {
     deleteBudget.mutate(deleteId, { onSuccess: () => { setDeleteId(null); setDetailBudget(null); } });
   };
 
-  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
+  const clearFilters = () => { setSearch(""); setStatusFilter("all"); resetPage(); };
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}</div><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div><h2 className="text-2xl font-bold">Orçamentos</h2><p className="text-sm text-muted-foreground mt-0.5">Gerencie e acompanhe todos os orçamentos</p></div>
+        <div>
+          <h2 className="text-2xl font-bold">Orçamentos</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gerencie e acompanhe todos os orçamentos
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 text-primary font-medium">• {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""} ativo{activeFiltersCount > 1 ? "s" : ""}</span>
+            )}
+          </p>
+        </div>
         <Button onClick={() => navigate("/novo-orcamento")} className="shadow-md shadow-primary/20"><FilePlus className="h-4 w-4 mr-2" />Novo Orçamento</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: counts.total, icon: FileText, color: "text-primary", sub: `${formatCurrency(totalValue)} total` },
+          {
+            label: "Total", value: counts.total, icon: FileText, color: "text-primary",
+            sub: `${formatCurrency(totalValue)} total`,
+            trend: monthComparison.countDiff !== 0 ? `${monthComparison.countDiff > 0 ? "+" : ""}${monthComparison.countDiff} este mês` : null,
+            trendUp: monthComparison.countDiff >= 0,
+          },
           { label: "Aprovados", value: counts.approved, icon: CheckCircle, color: "text-primary", sub: formatCurrency(approvedValue) },
-          { label: "Pendentes", value: counts.issued + counts.draft, icon: Clock, color: "text-warning", sub: `${counts.issued} emitidos, ${counts.draft} rascunhos` },
-          { label: "Conversão", value: `${conversionRate}%`, icon: TrendingUp, color: "text-primary", sub: `${counts.approved} de ${counts.total}` },
+          {
+            label: "Pendentes", value: counts.issued + counts.draft, icon: Clock, color: "text-warning",
+            sub: `${counts.issued} emitido${counts.issued !== 1 ? "s" : ""}, ${counts.draft} rascunho${counts.draft !== 1 ? "s" : ""}`,
+          },
+          {
+            label: "Conversão", value: `${conversionRate}%`, icon: TrendingUp, color: "text-primary",
+            sub: `${counts.approved} de ${counts.total}`,
+            extra: counts.rejected > 0 ? `${counts.rejected} rejeitado${counts.rejected !== 1 ? "s" : ""}` : null,
+          },
         ].map(c => (
-          <Card key={c.label} className="p-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><c.icon className={`h-5 w-5 ${c.color}`} /></div><div className="min-w-0"><p className="text-xs text-muted-foreground">{c.label}</p><p className="text-lg font-bold tabular-nums">{c.value}</p><p className="text-[10px] text-muted-foreground truncate">{c.sub}</p></div></div></Card>
+          <Card key={c.label} className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <c.icon className={`h-5 w-5 ${c.color}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">{c.label}</p>
+                <p className="text-lg font-bold tabular-nums">{c.value}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{c.sub}</p>
+                {"trend" in c && c.trend && (
+                  <p className={`text-[10px] flex items-center gap-0.5 ${c.trendUp ? "text-primary" : "text-destructive"}`}>
+                    {c.trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {c.trend}
+                  </p>
+                )}
+                {"extra" in c && c.extra && (
+                  <p className="text-[10px] text-destructive">{c.extra}</p>
+                )}
+              </div>
+            </div>
+          </Card>
         ))}
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por cliente, número ou descrição…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" /></div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos status</SelectItem><SelectItem value="draft">Rascunhos</SelectItem><SelectItem value="issued">Emitidos</SelectItem><SelectItem value="approved">Aprovados</SelectItem><SelectItem value="rejected">Rejeitados</SelectItem></SelectContent></Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}><SelectTrigger className="w-[160px]"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="date-desc">Mais recente</SelectItem><SelectItem value="date-asc">Mais antigo</SelectItem><SelectItem value="value-desc">Maior valor</SelectItem><SelectItem value="value-asc">Menor valor</SelectItem><SelectItem value="client">Cliente A-Z</SelectItem><SelectItem value="number">Número</SelectItem></SelectContent></Select>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por cliente, número, descrição, notas…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
+          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos status</SelectItem>
+            <SelectItem value="draft">Rascunhos</SelectItem>
+            <SelectItem value="issued">Emitidos</SelectItem>
+            <SelectItem value="approved">Aprovados</SelectItem>
+            <SelectItem value="rejected">Rejeitados</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+          <SelectTrigger className="w-[160px]">
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date-desc">Mais recente</SelectItem>
+            <SelectItem value="date-asc">Mais antigo</SelectItem>
+            <SelectItem value="value-desc">Maior valor</SelectItem>
+            <SelectItem value="value-asc">Menor valor</SelectItem>
+            <SelectItem value="client">Cliente A-Z</SelectItem>
+            <SelectItem value="number">Número</SelectItem>
+          </SelectContent>
+        </Select>
+        {activeFiltersCount > 0 && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={clearFilters}>Limpar filtros</Button>
+        )}
       </div>
 
-      <Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Número</TableHead><TableHead>Cliente</TableHead><TableHead className="hidden md:table-cell">Data</TableHead><TableHead>Valor</TableHead><TableHead className="hidden sm:table-cell">Recebido</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
-        {filtered.length === 0 ? (
-          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground"><FileText className="h-10 w-10 mx-auto mb-2 opacity-30" /><p>Nenhum orçamento encontrado</p>{!search && statusFilter === "all" && <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/novo-orcamento")}><FilePlus className="h-3.5 w-3.5 mr-1.5" />Criar primeiro orçamento</Button>}</TableCell></TableRow>
-        ) : paged.map((b) => {
-          const st = budgetStatusConfig[b.status as BudgetStatus];
-          const paid = paymentsMap[b.id] || 0;
-          const paidPct = Number(b.total) > 0 ? Math.min(100, Math.round((paid / Number(b.total)) * 100)) : 0;
-          return (
-            <TableRow key={b.id} className="group cursor-pointer" onClick={() => setDetailBudget(b)}>
-              <TableCell className="font-medium font-mono text-xs">{b.number}</TableCell>
-              <TableCell><div><p className="font-medium text-sm">{b.client_name}</p>{b.service_description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{b.service_description}</p>}<p className="text-xs text-muted-foreground md:hidden">{formatDate(b.created_at)}</p></div></TableCell>
-              <TableCell className="hidden md:table-cell text-sm">{formatDate(b.created_at)}</TableCell>
-              <TableCell className="tabular-nums font-semibold text-sm">{formatCurrency(Number(b.total))}</TableCell>
-              <TableCell className="hidden sm:table-cell">{b.status === "approved" && paid > 0 ? <div className="space-y-1"><span className="text-xs tabular-nums text-primary">{formatCurrency(paid)}</span><Progress value={paidPct} className="h-1.5 w-16" /></div> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
-              <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
-              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/editar-orcamento/${b.id}`)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadBudgetPdf(b, companySettings).then(() => toast.success("PDF gerado!"))} title="Baixar PDF"><Download className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(b)} disabled={duplicateBudget.isPending} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(b.id)} disabled={deleteBudget.isPending} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody></Table></CardContent></Card>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Número</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead className="hidden md:table-cell">Data</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead className="hidden sm:table-cell">Recebido</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                    <p>{activeFiltersCount > 0 ? "Nenhum orçamento encontrado" : "Nenhum orçamento cadastrado"}</p>
+                    {activeFiltersCount === 0 && (
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/novo-orcamento")}>
+                        <FilePlus className="h-3.5 w-3.5 mr-1.5" />Criar primeiro orçamento
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : paged.map((b) => {
+                const st = budgetStatusConfig[b.status as BudgetStatus];
+                const paid = paymentsMap[b.id] || 0;
+                const paidPct = Number(b.total) > 0 ? Math.min(100, Math.round((paid / Number(b.total)) * 100)) : 0;
+                return (
+                  <TableRow key={b.id} className="group cursor-pointer" onClick={() => setDetailBudget(b)}>
+                    <TableCell className="font-medium font-mono text-xs">{b.number}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm">{b.client_name}</p>
+                        {b.service_description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{b.service_description}</p>}
+                        <p className="text-xs text-muted-foreground md:hidden">{formatDate(b.created_at)}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{formatDate(b.created_at)}</TableCell>
+                    <TableCell className="tabular-nums font-semibold text-sm">{formatCurrency(Number(b.total))}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {b.status === "approved" && paid > 0 ? (
+                        <div className="space-y-1">
+                          <span className="text-xs tabular-nums text-primary">{formatCurrency(paid)}</span>
+                          <Progress value={paidPct} className="h-1.5 w-16" />
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/editar-orcamento/${b.id}`)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadBudgetPdf(b, companySettings).then(() => toast.success("PDF gerado!"))} title="Baixar PDF"><Download className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(b)} disabled={duplicateBudget.isPending} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(b.id)} disabled={deleteBudget.isPending} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground">Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} orçamentos</span>
+        <p className="text-xs text-muted-foreground">
+          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} orçamentos
+          {activeFiltersCount > 0 && (
+            <> • Filtros: {[
+              statusFilter !== "all" && budgetStatusConfig[statusFilter as BudgetStatus]?.label,
+              search && `"${search}"`,
+            ].filter(Boolean).join(", ")}</>
+          )}
+        </p>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-foreground tabular-nums">Total: {formatCurrency(totalValue)}</span>
+          <span className="text-xs font-semibold text-primary tabular-nums">Total filtrado: {formatCurrency(totalValue)}</span>
           {totalPages > 1 && (
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
@@ -196,20 +339,33 @@ export default function Budgets() {
                 <Separator />
                 <div>
                   <h4 className="text-sm font-semibold mb-2">Itens ({items.length})</h4>
-                  <div className="border rounded-lg overflow-hidden"><Table><TableHeader><TableRow><TableHead className="text-xs">Material</TableHead><TableHead className="text-xs hidden sm:table-cell">Dimensões</TableHead><TableHead className="text-xs">Qtd</TableHead><TableHead className="text-xs">Unit.</TableHead><TableHead className="text-xs text-right">Total</TableHead></TableRow></TableHeader><TableBody>
-                    {items.map(item => {
-                      const area = item.unit === "m²" && Number(item.width) > 0 && Number(item.height) > 0 ? (Number(item.width) / 100) * (Number(item.height) / 100) : 0;
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-xs"><div><p className="font-medium">{item.material_name}</p>{item.notes && <p className="text-muted-foreground">{item.notes}</p>}</div></TableCell>
-                          <TableCell className="text-xs hidden sm:table-cell">{Number(item.width) > 0 && Number(item.height) > 0 ? <div><span className="tabular-nums">{Number(item.width)} × {Number(item.height)} cm</span>{area > 0 && <p className="text-[10px] text-muted-foreground tabular-nums">= {area.toFixed(2)} m²</p>}</div> : "—"}</TableCell>
-                          <TableCell className="text-xs tabular-nums">{item.qty} {item.unit}</TableCell>
-                          <TableCell className="text-xs tabular-nums">{formatCurrency(Number(item.unit_price))}</TableCell>
-                          <TableCell className="text-xs tabular-nums text-right font-medium">{formatCurrency(Number(item.total))}</TableCell>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Material</TableHead>
+                          <TableHead className="text-xs hidden sm:table-cell">Dimensões</TableHead>
+                          <TableHead className="text-xs">Qtd</TableHead>
+                          <TableHead className="text-xs">Unit.</TableHead>
+                          <TableHead className="text-xs text-right">Total</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody></Table></div>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map(item => {
+                          const area = item.unit === "m²" && Number(item.width) > 0 && Number(item.height) > 0 ? (Number(item.width) / 100) * (Number(item.height) / 100) : 0;
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="text-xs"><div><p className="font-medium">{item.material_name}</p>{item.notes && <p className="text-muted-foreground">{item.notes}</p>}</div></TableCell>
+                              <TableCell className="text-xs hidden sm:table-cell">{Number(item.width) > 0 && Number(item.height) > 0 ? <div><span className="tabular-nums">{Number(item.width)} × {Number(item.height)} cm</span>{area > 0 && <p className="text-[10px] text-muted-foreground tabular-nums">= {area.toFixed(2)} m²</p>}</div> : "—"}</TableCell>
+                              <TableCell className="text-xs tabular-nums">{item.qty} {item.unit}</TableCell>
+                              <TableCell className="text-xs tabular-nums">{formatCurrency(Number(item.unit_price))}</TableCell>
+                              <TableCell className="text-xs tabular-nums text-right font-medium">{formatCurrency(Number(item.total))}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatCurrency(Number(detailBudget.subtotal))}</span></div>
@@ -257,11 +413,28 @@ export default function Budgets() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação excluirá o orçamento e todos os seus itens permanentemente. Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {budgetToDelete && (
+                <span className="block mb-2 font-medium text-foreground">
+                  "{budgetToDelete.number}" — {budgetToDelete.client_name} — {formatCurrency(Number(budgetToDelete.total))}
+                  {budgetToDelete.service_description && <span className="block text-xs text-muted-foreground mt-0.5">{budgetToDelete.service_description}</span>}
+                </span>
+              )}
+              {(() => {
+                const paid = deleteId ? paymentsMap[deleteId] || 0 : 0;
+                if (paid > 0) {
+                  return `⚠️ Este orçamento possui ${formatCurrency(paid)} em pagamentos vinculados. `;
+                }
+                return "";
+              })()}
+              Esta ação excluirá o orçamento e todos os seus itens permanentemente. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteBudget.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleteBudget.isPending ? "Excluindo…" : "Excluir"}</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteBudget.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteBudget.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
