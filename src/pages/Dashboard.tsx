@@ -5,8 +5,9 @@ import { useMaterials } from "@/hooks/useMaterials";
 import { useBudgets } from "@/hooks/useBudgets";
 import { usePayments } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
+import { useSuppliers } from "@/hooks/useSuppliers";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
-import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays } from "lucide-react";
+import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -25,12 +26,22 @@ function getGreeting(): string {
   return "Boa noite";
 }
 
+function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getPrevMonthKey(date: Date): string {
+  const d = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  return getMonthKey(d);
+}
+
 export default function Dashboard() {
   const { data: clients = [], isLoading: loadingClients } = useClients();
   const { data: materials = [], isLoading: loadingMaterials } = useMaterials();
   const { data: budgets = [], isLoading: loadingBudgets } = useBudgets();
   const { data: payments = [], isLoading: loadingPayments } = usePayments();
   const { data: expenses = [], isLoading: loadingExpenses } = useExpenses();
+  const { data: suppliers = [] } = useSuppliers();
   const { data: profile } = useCurrentProfile();
 
   const isLoading = loadingClients || loadingBudgets || loadingMaterials || loadingPayments || loadingExpenses;
@@ -38,32 +49,44 @@ export default function Dashboard() {
   const userName = profile?.name || profile?.email?.split("@")[0] || "";
   const todayFormatted = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  // Current month filter for financial data
-  const currentMonthKey = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  }, []);
+  const now = new Date();
+  const currentMonthKey = useMemo(() => getMonthKey(now), []);
+  const prevMonthKey = useMemo(() => getPrevMonthKey(now), []);
 
   const monthPayments = useMemo(() => payments.filter((p) => p.date.startsWith(currentMonthKey)), [payments, currentMonthKey]);
   const monthExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(currentMonthKey)), [expenses, currentMonthKey]);
+  const prevMonthPayments = useMemo(() => payments.filter((p) => p.date.startsWith(prevMonthKey)), [payments, prevMonthKey]);
+  const prevMonthExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(prevMonthKey)), [expenses, prevMonthKey]);
 
   const totalReceitas = payments.reduce((s, p) => s + Number(p.amount), 0);
   const totalDespesas = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const saldo = totalReceitas - totalDespesas;
 
   const monthReceitas = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
   const monthDespesas = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const monthSaldo = monthReceitas - monthDespesas;
 
+  const prevMonthReceitas = prevMonthPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const prevMonthDespesas = prevMonthExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const prevMonthSaldo = prevMonthReceitas - prevMonthDespesas;
+
   const approvedBudgets = budgets.filter((b) => b.status === "approved");
   const totalApproved = approvedBudgets.reduce((s, b) => s + Number(b.total), 0);
   const pendingBudgets = budgets.filter((b) => b.status === "issued" || b.status === "draft");
 
+  // Month-over-month budget count
+  const monthBudgets = budgets.filter(b => b.created_at.startsWith(currentMonthKey)).length;
+  const prevMonthBudgets = budgets.filter(b => b.created_at.startsWith(prevMonthKey)).length;
+  const budgetDiff = monthBudgets - prevMonthBudgets;
+
+  // Saldo comparison
+  const saldoDiff = monthSaldo - prevMonthSaldo;
+  const saldoTrendLabel = saldoDiff > 0 ? `+${formatCurrency(saldoDiff)}` : saldoDiff < 0 ? formatCurrency(saldoDiff) : "Estável";
+
   const summaryCards = [
     { title: "Clientes", value: clients.length, subtitle: `${clients.filter((c) => c.status === "active").length} ativos`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
-    { title: "Materiais", value: materials.length, subtitle: "no catálogo", icon: Package, trend: null, trendUp: true, href: "/materiais" },
-    { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovados`, icon: FileText, trend: `${pendingBudgets.length} pendentes`, trendUp: true, href: "/orcamentos" },
-    { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: monthSaldo >= 0 ? "Saudável" : "Atenção", trendUp: monthSaldo >= 0, href: "/financeiro" },
+    { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovados`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
+    { title: "Fornecedores", value: suppliers.length, subtitle: `${suppliers.filter(s => s.active).length} ativos`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
+    { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro" },
   ];
 
   if (isLoading) {
@@ -82,9 +105,6 @@ export default function Dashboard() {
         <div className="grid gap-4 lg:grid-cols-3">
           <Skeleton className="h-[320px] rounded-xl" />
           <Skeleton className="h-[320px] lg:col-span-2 rounded-xl" />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[280px] rounded-xl" />)}
         </div>
       </div>
     );
