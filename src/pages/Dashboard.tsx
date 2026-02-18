@@ -1,14 +1,7 @@
-import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useClients } from "@/hooks/useClients";
-import { useMaterials } from "@/hooks/useMaterials";
-import { useBudgets } from "@/hooks/useBudgets";
-import { usePayments } from "@/hooks/usePayments";
-import { useExpenses } from "@/hooks/useExpenses";
-import { useSuppliers } from "@/hooks/useSuppliers";
-import { useCurrentProfile } from "@/hooks/useCurrentProfile";
-import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck } from "lucide-react";
+import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { ConversionMetrics } from "@/components/dashboard/ConversionMetrics";
@@ -18,6 +11,9 @@ import { BudgetStatusChart } from "@/components/dashboard/BudgetStatusChart";
 import { RecentBudgets } from "@/components/dashboard/RecentBudgets";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ExpiringBudgets } from "@/components/dashboard/ExpiringBudgets";
+import { WelcomeOnboarding } from "@/components/dashboard/WelcomeOnboarding";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -27,110 +23,52 @@ function getGreeting(): string {
   return "Boa noite";
 }
 
-function getMonthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getPrevMonthKey(date: Date): string {
-  const d = new Date(date.getFullYear(), date.getMonth() - 1, 1);
-  return getMonthKey(d);
-}
-
 export default function Dashboard() {
-  const { data: clients = [], isLoading: loadingClients } = useClients();
-  const { data: materials = [], isLoading: loadingMaterials } = useMaterials();
-  const { data: budgets = [], isLoading: loadingBudgets } = useBudgets();
-  const { data: payments = [], isLoading: loadingPayments } = usePayments();
-  const { data: expenses = [], isLoading: loadingExpenses } = useExpenses();
-  const { data: suppliers = [] } = useSuppliers();
-  const { data: profile } = useCurrentProfile();
+  const data = useDashboardData();
 
-  const isLoading = loadingClients || loadingBudgets || loadingMaterials || loadingPayments || loadingExpenses;
-
-  const userName = profile?.name || profile?.email?.split("@")[0] || "";
-  const todayFormatted = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-
-  const now = useMemo(() => new Date(), []);
-  const currentMonthKey = useMemo(() => getMonthKey(now), [now]);
-  const prevMonthKey = useMemo(() => getPrevMonthKey(now), [now]);
-
-  const monthPayments = useMemo(() => payments.filter((p) => p.date.startsWith(currentMonthKey)), [payments, currentMonthKey]);
-  const monthExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(currentMonthKey)), [expenses, currentMonthKey]);
-  const prevMonthPayments = useMemo(() => payments.filter((p) => p.date.startsWith(prevMonthKey)), [payments, prevMonthKey]);
-  const prevMonthExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(prevMonthKey)), [expenses, prevMonthKey]);
-
-  const totalReceitas = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const totalDespesas = expenses.reduce((s, e) => s + Number(e.amount), 0);
-
-  const monthReceitas = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
-  const monthDespesas = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
-  const monthSaldo = monthReceitas - monthDespesas;
-
-  const prevMonthReceitas = prevMonthPayments.reduce((s, p) => s + Number(p.amount), 0);
-  const prevMonthDespesas = prevMonthExpenses.reduce((s, e) => s + Number(e.amount), 0);
-  const prevMonthSaldo = prevMonthReceitas - prevMonthDespesas;
-
-  const approvedBudgets = budgets.filter((b) => b.status === "approved");
-  const totalApproved = approvedBudgets.reduce((s, b) => s + Number(b.total), 0);
-  const pendingBudgets = budgets.filter((b) => b.status === "issued" || b.status === "draft");
-  const rejectedBudgets = budgets.filter((b) => b.status === "rejected");
-
-  // Month-over-month budget count
-  const monthBudgets = budgets.filter(b => b.created_at.startsWith(currentMonthKey)).length;
-  const prevMonthBudgets = budgets.filter(b => b.created_at.startsWith(prevMonthKey)).length;
-  const budgetDiff = monthBudgets - prevMonthBudgets;
-
-  // Saldo comparison
-  const saldoDiff = monthSaldo - prevMonthSaldo;
-  const saldoTrendLabel = saldoDiff > 0 ? `+${formatCurrency(saldoDiff)}` : saldoDiff < 0 ? formatCurrency(saldoDiff) : "Estável";
-
-  const activeClients = clients.filter((c) => c.status === "active").length;
-  const activeSuppliers = suppliers.filter((s) => s.active).length;
-
-  // Material categories count
-  const materialCategories = useMemo(() => {
-    const cats = new Set(materials.map(m => m.category));
-    return cats.size;
-  }, [materials]);
-
-  // Top clients by payment volume
-  const topClients = useMemo(() => {
-    const map: Record<string, number> = {};
-    payments.forEach(p => { map[p.client_name] = (map[p.client_name] || 0) + Number(p.amount); });
-    return Object.entries(map).sort(([, a], [, b]) => b - a).slice(0, 3);
-  }, [payments]);
-
-  // Pending budgets total value
-  const pendingTotal = pendingBudgets.reduce((s, b) => s + Number(b.total), 0);
-
-  const summaryCards = [
-    { title: "Clientes", value: clients.length, subtitle: `${activeClients} ativo${activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
-    { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovado${approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
-    { title: "Materiais", value: materials.length, subtitle: `${materialCategories} categoria${materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
-    { title: "Fornecedores", value: suppliers.length, subtitle: `${activeSuppliers} ativo${activeSuppliers !== 1 ? "s" : ""}`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
-    { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro", negative: monthSaldo < 0 },
-  ];
-
-  if (isLoading) {
+  if (data.isLoading) {
     return (
       <div className="space-y-6" role="status" aria-label="Carregando dashboard">
         <div className="flex items-center justify-between">
           <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-64 mt-2" /></div>
           <div className="hidden sm:flex gap-2">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-9 w-28" />)}</div>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[120px] rounded-xl" />)}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[120px] rounded-xl" />)}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[140px] rounded-xl" />)}
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Skeleton className="h-[320px] rounded-xl" />
-          <Skeleton className="h-[320px] lg:col-span-2 rounded-xl" />
-        </div>
       </div>
     );
   }
+
+  if (data.hasError) {
+    return (
+      <Card className="border-destructive/30">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+          <h3 className="text-lg font-semibold">Erro ao carregar dados</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md">
+            Não foi possível carregar os dados do dashboard. Verifique sua conexão e tente novamente.
+          </p>
+          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const todayFormatted = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const summaryCards = [
+    { title: "Clientes", value: data.clients.length, subtitle: `${data.activeClients} ativo${data.activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
+    { title: "Orçamentos", value: data.budgets.length, subtitle: `${data.approvedBudgets.length} aprovado${data.approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: data.budgetDiff !== 0 ? `${data.budgetDiff > 0 ? "+" : ""}${data.budgetDiff} este mês` : null, trendUp: data.budgetDiff >= 0, href: "/orcamentos" },
+    { title: "Materiais", value: data.materials.length, subtitle: `${data.materialCategories} categoria${data.materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
+    { title: "Fornecedores", value: data.suppliers.length, subtitle: `${data.activeSuppliers} ativo${data.activeSuppliers !== 1 ? "s" : ""}`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
+    { title: "Saldo do Mês", value: formatCurrency(data.monthSaldo), subtitle: data.monthSaldo >= 0 ? "Positivo" : "Negativo", icon: data.monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: data.saldoTrendLabel, trendUp: data.saldoDiff >= 0, href: "/financeiro", negative: data.monthSaldo < 0 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -138,7 +76,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            {getGreeting()}{userName ? `, ${userName}` : ""}! <Sparkles className="h-5 w-5 text-primary" />
+            {getGreeting()}{data.userName ? `, ${data.userName}` : ""}! <Sparkles className="h-5 w-5 text-primary" />
           </h2>
           <div className="flex items-center gap-3 mt-1">
             <p className="text-xs text-muted-foreground flex items-center gap-1.5 capitalize">
@@ -147,8 +85,8 @@ export default function Dashboard() {
             </p>
             <span className="text-muted-foreground/40">•</span>
             <p className="text-xs text-muted-foreground">
-              {pendingBudgets.length > 0 ? (
-                <><span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}pendência{pendingBudgets.length !== 1 && "s"} ({formatCurrency(pendingTotal)})</>
+              {data.pendingBudgets.length > 0 ? (
+                <><span className="font-semibold text-foreground">{data.pendingBudgets.length}</span>{" "}pendência{data.pendingBudgets.length !== 1 && "s"} ({formatCurrency(data.pendingTotal)})</>
               ) : (
                 "Tudo em dia 🎉"
               )}
@@ -158,36 +96,47 @@ export default function Dashboard() {
         <QuickActions />
       </div>
 
+      {/* Onboarding for new users */}
+      {data.isEmpty && (
+        <WelcomeOnboarding
+          userName={data.userName}
+          hasClients={data.clients.length > 0}
+          hasMaterials={data.materials.length > 0}
+          hasBudgets={data.budgets.length > 0}
+          hasSuppliers={data.suppliers.length > 0}
+        />
+      )}
+
       {/* Summary Cards */}
       <SummaryCards cards={summaryCards} />
 
       {/* Conversion Metrics */}
-      <ConversionMetrics budgets={budgets} approvedBudgets={approvedBudgets} pendingBudgets={pendingBudgets} rejectedCount={rejectedBudgets.length} />
+      <ConversionMetrics budgets={data.budgets} approvedBudgets={data.approvedBudgets} pendingBudgets={data.pendingBudgets} rejectedCount={data.rejectedBudgets.length} />
 
       {/* Financial Summary + Revenue Chart */}
       <div className="grid gap-4 lg:grid-cols-3">
         <FinancialSummary
-          totalReceitas={totalReceitas}
-          totalDespesas={totalDespesas}
-          totalApproved={totalApproved}
-          monthReceitas={monthReceitas}
-          monthDespesas={monthDespesas}
-          prevMonthReceitas={prevMonthReceitas}
-          prevMonthDespesas={prevMonthDespesas}
-          topClients={topClients}
+          totalReceitas={data.totalReceitas}
+          totalDespesas={data.totalDespesas}
+          totalApproved={data.totalApproved}
+          monthReceitas={data.monthReceitas}
+          monthDespesas={data.monthDespesas}
+          prevMonthReceitas={data.prevMonthReceitas}
+          prevMonthDespesas={data.prevMonthDespesas}
+          topClients={data.topClients}
         />
-        <RevenueChart payments={payments} expenses={expenses} />
+        <RevenueChart payments={data.payments} expenses={data.expenses} />
       </div>
 
       {/* Status + Recent Budgets + Activity */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <BudgetStatusChart budgets={budgets} />
-        <RecentBudgets budgets={budgets} />
-        <RecentActivity payments={payments} expenses={expenses} budgets={budgets} />
+        <BudgetStatusChart budgets={data.budgets} />
+        <RecentBudgets budgets={data.budgets} />
+        <RecentActivity payments={data.payments} expenses={data.expenses} budgets={data.budgets} />
       </div>
 
       {/* Expiring Budgets */}
-      <ExpiringBudgets budgets={budgets} />
+      <ExpiringBudgets budgets={data.budgets} />
     </div>
   );
 }
