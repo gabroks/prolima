@@ -25,19 +25,26 @@ export function ExpenseCharts({ categoryBreakdown, monthlyTrend }: Props) {
     border: "1px solid hsl(var(--border))",
     fontSize: "12px",
     backgroundColor: "hsl(var(--card))",
+    color: "hsl(var(--foreground))",
   };
 
+  const hasCharts = categoryBreakdown.length > 0 || monthlyTrend.length > 1;
+  if (!hasCharts) return null;
+
+  // Dynamic height based on number of categories (min 120, max 280)
+  const catChartHeight = Math.min(280, Math.max(120, categoryBreakdown.length * 36 + 20));
+
   return (
-    <>
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
       {categoryBreakdown.length > 0 && (
         <Card className="p-5">
           <p className="text-sm font-semibold flex items-center gap-2 mb-4">
             <BarChart3 className="h-4 w-4 text-muted-foreground" />Despesas por Categoria
           </p>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={catChartHeight}>
             <BarChart data={categoryBreakdown} layout="vertical" barSize={20}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(1)}k`} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `R$${(v / 1000).toFixed(1)}k` : `R$${v}`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={90} />
               <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipStyle} />
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>
@@ -53,19 +60,19 @@ export function ExpenseCharts({ categoryBreakdown, monthlyTrend }: Props) {
       {monthlyTrend.length > 1 && (
         <Card className="p-5">
           <p className="text-sm font-semibold flex items-center gap-2 mb-4">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />Evolução Mensal de Despesas
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />Evolução Mensal
           </p>
-          <ResponsiveContainer width="100%" height={160}>
+          <ResponsiveContainer width="100%" height={catChartHeight}>
             <AreaChart data={monthlyTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
               <Tooltip formatter={(v: number) => [formatCurrency(v), "Despesas"]} contentStyle={tooltipStyle} />
               <Area type="monotone" dataKey="total" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive))" fillOpacity={0.1} strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </Card>
       )}
-    </>
+    </div>
   );
 }
