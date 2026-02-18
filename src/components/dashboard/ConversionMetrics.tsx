@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, TrendingUp, Target } from "lucide-react";
+import { AlertCircle, TrendingUp, Target, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/formatters";
 import { budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
@@ -12,9 +12,10 @@ interface ConversionMetricsProps {
   budgets: BudgetWithItems[];
   approvedBudgets: BudgetWithItems[];
   pendingBudgets: BudgetWithItems[];
+  rejectedCount?: number;
 }
 
-export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: ConversionMetricsProps) {
+export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, rejectedCount = 0 }: ConversionMetricsProps) {
   const navigate = useNavigate();
 
   // Exclude drafts from conversion calc — only issued/approved/rejected are meaningful
@@ -23,11 +24,17 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
     ? Math.round((approvedBudgets.length / issuedOrBeyond.length) * 100)
     : 0;
 
+  const rejectionRate = issuedOrBeyond.length > 0
+    ? Math.round((rejectedCount / issuedOrBeyond.length) * 100)
+    : 0;
+
   // Ticket médio only from non-draft budgets with total > 0
   const budgetsWithValue = budgets.filter((b) => Number(b.total) > 0);
   const ticketMedio = budgetsWithValue.length > 0
     ? budgetsWithValue.reduce((s, b) => s + Number(b.total), 0) / budgetsWithValue.length
     : 0;
+
+  const pendingTotal = pendingBudgets.reduce((s, b) => s + Number(b.total), 0);
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -44,9 +51,17 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
                 <span className="text-xs text-muted-foreground mb-1">aprovados</span>
               </div>
               <Progress value={conversionRate} className="h-2" />
-              <p className="text-[11px] text-muted-foreground mt-2">
-                {approvedBudgets.length} de {issuedOrBeyond.length} orçamentos emitidos
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-[11px] text-muted-foreground">
+                  {approvedBudgets.length} de {issuedOrBeyond.length} emitidos
+                </p>
+                {rejectedCount > 0 && (
+                  <p className="text-[11px] text-destructive flex items-center gap-0.5">
+                    <XCircle className="h-3 w-3" />
+                    {rejectedCount} rejeitado{rejectedCount !== 1 ? "s" : ""} ({rejectionRate}%)
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TooltipTrigger>
@@ -77,7 +92,12 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
 
       <Card className="animate-slide-up sm:col-span-2 lg:col-span-1" style={{ animationDelay: "370ms", animationFillMode: "backwards" }}>
         <CardContent className="p-5">
-          <p className="text-xs text-muted-foreground font-medium mb-2">Pendências</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground font-medium">Pendências</p>
+            {pendingTotal > 0 && (
+              <span className="text-[11px] font-semibold text-primary tabular-nums">{formatCurrency(pendingTotal)}</span>
+            )}
+          </div>
           <div className="space-y-2.5">
             {pendingBudgets.length > 0 ? (
               pendingBudgets.slice(0, 3).map((b) => {
@@ -92,12 +112,20 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets }: 
                       <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" />
                       <span className="text-sm truncate">{b.number} — {b.client_name}</span>
                     </div>
-                    <Badge variant={st.variant} className="text-[10px] h-5 shrink-0 ml-2">{st.label}</Badge>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-[10px] tabular-nums text-muted-foreground">{formatCurrency(Number(b.total))}</span>
+                      <Badge variant={st.variant} className="text-[10px] h-5">{st.label}</Badge>
+                    </div>
                   </div>
                 );
               })
             ) : (
               <p className="text-sm text-muted-foreground">Nenhuma pendência 🎉</p>
+            )}
+            {pendingBudgets.length > 3 && (
+              <p className="text-[11px] text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => navigate("/orcamentos")}>
+                +{pendingBudgets.length - 3} pendência{pendingBudgets.length - 3 > 1 ? "s" : ""} não exibida{pendingBudgets.length - 3 > 1 ? "s" : ""}
+              </p>
             )}
           </div>
         </CardContent>

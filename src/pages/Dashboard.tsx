@@ -7,7 +7,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
-import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers } from "lucide-react";
+import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -72,6 +72,7 @@ export default function Dashboard() {
   const approvedBudgets = budgets.filter((b) => b.status === "approved");
   const totalApproved = approvedBudgets.reduce((s, b) => s + Number(b.total), 0);
   const pendingBudgets = budgets.filter((b) => b.status === "issued" || b.status === "draft");
+  const rejectedBudgets = budgets.filter((b) => b.status === "rejected");
 
   // Month-over-month budget count
   const monthBudgets = budgets.filter(b => b.created_at.startsWith(currentMonthKey)).length;
@@ -91,10 +92,20 @@ export default function Dashboard() {
     return cats.size;
   }, [materials]);
 
+  // Top clients by payment volume
+  const topClients = useMemo(() => {
+    const map: Record<string, number> = {};
+    payments.forEach(p => { map[p.client_name] = (map[p.client_name] || 0) + Number(p.amount); });
+    return Object.entries(map).sort(([, a], [, b]) => b - a).slice(0, 3);
+  }, [payments]);
+
+  // Pending budgets total value
+  const pendingTotal = pendingBudgets.reduce((s, b) => s + Number(b.total), 0);
+
   const summaryCards = [
     { title: "Clientes", value: clients.length, subtitle: `${activeClients} ativo${activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
     { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovado${approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
-    { title: "Materiais", value: materials.length, subtitle: `${materialCategories} categoria${materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
+    { title: "Fornecedores", value: suppliers.length, subtitle: `${activeSuppliers} ativo${activeSuppliers !== 1 ? "s" : ""}`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
     { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro", negative: monthSaldo < 0 },
   ];
 
@@ -135,7 +146,7 @@ export default function Dashboard() {
             <span className="text-muted-foreground/40">•</span>
             <p className="text-xs text-muted-foreground">
               {pendingBudgets.length > 0 ? (
-                <><span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}pendência{pendingBudgets.length !== 1 && "s"}</>
+                <><span className="font-semibold text-foreground">{pendingBudgets.length}</span>{" "}pendência{pendingBudgets.length !== 1 && "s"} ({formatCurrency(pendingTotal)})</>
               ) : (
                 "Tudo em dia 🎉"
               )}
@@ -149,7 +160,7 @@ export default function Dashboard() {
       <SummaryCards cards={summaryCards} />
 
       {/* Conversion Metrics */}
-      <ConversionMetrics budgets={budgets} approvedBudgets={approvedBudgets} pendingBudgets={pendingBudgets} />
+      <ConversionMetrics budgets={budgets} approvedBudgets={approvedBudgets} pendingBudgets={pendingBudgets} rejectedCount={rejectedBudgets.length} />
 
       {/* Financial Summary + Revenue Chart */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -159,6 +170,9 @@ export default function Dashboard() {
           totalApproved={totalApproved}
           monthReceitas={monthReceitas}
           monthDespesas={monthDespesas}
+          prevMonthReceitas={prevMonthReceitas}
+          prevMonthDespesas={prevMonthDespesas}
+          topClients={topClients}
         />
         <RevenueChart payments={payments} expenses={expenses} />
       </div>
