@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -289,27 +290,12 @@ export default function Budgets() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-muted-foreground">
-          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} orçamentos
-          {activeFiltersCount > 0 && (
-            <> • Filtros: {[
-              statusFilter !== "all" && budgetStatusConfig[statusFilter as BudgetStatus]?.label,
-              search && `"${search}"`,
-            ].filter(Boolean).join(", ")}</>
-          )}
-        </p>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-primary tabular-nums">Total filtrado: {formatCurrency(totalValue)}</span>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-              <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
-            </div>
-          )}
-        </div>
-      </div>
+      <PaginationFooter
+        page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE}
+        onPageChange={setPage} label="orçamentos"
+        extraInfo={<span className="text-xs font-semibold text-primary tabular-nums">Total filtrado: {formatCurrency(totalValue)}</span>}
+        filterSummary={activeFiltersCount > 0 ? [statusFilter !== "all" && budgetStatusConfig[statusFilter as BudgetStatus]?.label, search && `"${search}"`].filter(Boolean).join(", ") : undefined}
+      />
 
       {/* Detail Dialog */}
       <Dialog open={!!detailBudget} onOpenChange={() => setDetailBudget(null)}>
@@ -408,36 +394,11 @@ export default function Budgets() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {budgetToDelete && (
-                <span className="block mb-2 font-medium text-foreground">
-                  "{budgetToDelete.number}" — {budgetToDelete.client_name} — {formatCurrency(Number(budgetToDelete.total))}
-                  {budgetToDelete.service_description && <span className="block text-xs text-muted-foreground mt-0.5">{budgetToDelete.service_description}</span>}
-                </span>
-              )}
-              {(() => {
-                const paid = deleteId ? paymentsMap[deleteId] || 0 : 0;
-                if (paid > 0) {
-                  return `⚠️ Este orçamento possui ${formatCurrency(paid)} em pagamentos vinculados. `;
-                }
-                return "";
-              })()}
-              Esta ação excluirá o orçamento e todos os seus itens permanentemente. Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteBudget.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteBudget.isPending ? "Excluindo…" : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteId} onOpenChange={() => setDeleteId(null)} onConfirm={handleDelete}
+        title="Excluir orçamento?" isDeleting={deleteBudget.isPending}
+        description={<>{budgetToDelete && <span className="block mb-2 font-medium text-foreground">"{budgetToDelete.number}" — {budgetToDelete.client_name} — {formatCurrency(Number(budgetToDelete.total))}{budgetToDelete.service_description && <span className="block text-xs text-muted-foreground mt-0.5">{budgetToDelete.service_description}</span>}</span>}{(() => { const paid = deleteId ? paymentsMap[deleteId] || 0 : 0; if (paid > 0) return `⚠️ Este orçamento possui ${formatCurrency(paid)} em pagamentos vinculados. `; return ""; })()}Esta ação excluirá o orçamento e todos os seus itens permanentemente. Esta ação não pode ser desfeita.</>}
+      />
     </div>
   );
 }

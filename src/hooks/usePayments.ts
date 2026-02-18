@@ -18,6 +18,7 @@ export interface PaymentForm {
 export function usePayments() {
   return useQuery({
     queryKey: ["payments"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.from("payments").select("*").order("date", { ascending: false });
       if (error) throw error;

@@ -40,6 +40,7 @@ function toInsert(form: ClientForm): TablesInsert<"clients"> {
 export function useClients() {
   return useQuery({
     queryKey: ["clients"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
