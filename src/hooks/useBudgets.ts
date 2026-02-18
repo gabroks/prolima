@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 export type DbBudget = Tables<"budgets">;
@@ -67,9 +68,10 @@ export interface BudgetFormData {
 
 export function useCreateBudget() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ budgetNumber, form }: { budgetNumber: string; form: BudgetFormData }) => {
-      // Quota enforcement
+      if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("budgets").select("id", { count: "exact", head: true }),
         supabase.from("system_limits").select("max_budgets").limit(1).single(),
@@ -81,6 +83,7 @@ export function useCreateBudget() {
       const { data: budget, error: budgetError } = await supabase
         .from("budgets")
         .insert({
+          user_id: user.id,
           number: budgetNumber,
           client_id: form.clientId,
           client_name: form.clientName,
@@ -104,6 +107,7 @@ export function useCreateBudget() {
 
       if (form.items.length > 0) {
         const itemsInsert: TablesInsert<"budget_items">[] = form.items.map(item => ({
+          user_id: user.id,
           budget_id: budget.id,
           material_id: item.materialId || null,
           material_name: item.materialName,
@@ -131,8 +135,10 @@ export function useCreateBudget() {
 
 export function useUpdateBudget() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, form }: { id: string; form: BudgetFormData }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error: budgetError } = await supabase
         .from("budgets")
         .update({
@@ -155,12 +161,12 @@ export function useUpdateBudget() {
         .eq("id", id);
       if (budgetError) throw budgetError;
 
-      // Delete old items and insert new ones
       const { error: delErr } = await supabase.from("budget_items").delete().eq("budget_id", id);
       if (delErr) throw delErr;
 
       if (form.items.length > 0) {
         const itemsInsert: TablesInsert<"budget_items">[] = form.items.map(item => ({
+          user_id: user.id,
           budget_id: id,
           material_id: item.materialId || null,
           material_name: item.materialName,
@@ -218,7 +224,6 @@ export function useDeleteBudget() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Delete items first, then budget
       const { error: itemsErr } = await supabase.from("budget_items").delete().eq("budget_id", id);
       if (itemsErr) throw itemsErr;
       const { error } = await supabase.from("budgets").delete().eq("id", id);
@@ -234,11 +239,14 @@ export function useDeleteBudget() {
 
 export function useDuplicateBudget() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ budget, newNumber }: { budget: BudgetWithItems; newNumber: string }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { data: newBudget, error: budgetError } = await supabase
         .from("budgets")
         .insert({
+          user_id: user.id,
           number: newNumber,
           client_id: budget.client_id,
           client_name: budget.client_name,
@@ -261,7 +269,8 @@ export function useDuplicateBudget() {
       if (budgetError) throw budgetError;
 
       if (budget.budget_items && budget.budget_items.length > 0) {
-        const items = budget.budget_items.map(item => ({
+        const items: TablesInsert<"budget_items">[] = budget.budget_items.map(item => ({
+          user_id: user.id,
           budget_id: newBudget.id,
           material_id: item.material_id,
           material_name: item.material_name,

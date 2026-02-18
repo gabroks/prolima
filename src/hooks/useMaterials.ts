@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type DbMaterial = Tables<"materials">;
@@ -14,8 +15,9 @@ export interface MaterialForm {
   notes?: string;
 }
 
-function toInsert(form: MaterialForm): TablesInsert<"materials"> {
+function toInsert(form: MaterialForm, userId: string): TablesInsert<"materials"> {
   return {
+    user_id: userId,
     name: form.name,
     category: form.category || "Outros",
     charge_unit: form.chargeUnit || "m²",
@@ -42,8 +44,10 @@ export function useMaterials() {
 
 export function useCreateMaterial() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (form: MaterialForm) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("materials").select("id", { count: "exact", head: true }),
         supabase.from("system_limits").select("max_materials").limit(1).single(),
@@ -54,7 +58,7 @@ export function useCreateMaterial() {
 
       const { data, error } = await supabase
         .from("materials")
-        .insert(toInsert(form))
+        .insert(toInsert(form, user.id))
         .select()
         .single();
       if (error) throw error;
@@ -71,11 +75,13 @@ export function useCreateMaterial() {
 
 export function useUpdateMaterial() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, form }: { id: string; form: MaterialForm }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase
         .from("materials")
-        .update(toInsert(form) as TablesUpdate<"materials">)
+        .update(toInsert(form, user.id) as TablesUpdate<"materials">)
         .eq("id", id);
       if (error) throw error;
     },
