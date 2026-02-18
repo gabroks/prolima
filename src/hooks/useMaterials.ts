@@ -28,6 +28,7 @@ function toInsert(form: MaterialForm): TablesInsert<"materials"> {
 export function useMaterials() {
   return useQuery({
     queryKey: ["materials"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("materials")

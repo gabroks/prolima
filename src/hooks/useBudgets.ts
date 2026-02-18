@@ -13,6 +13,7 @@ export interface BudgetWithItems extends DbBudget {
 export function useBudgets() {
   return useQuery({
     queryKey: ["budgets"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("budgets")

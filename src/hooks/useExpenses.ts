@@ -20,6 +20,7 @@ export interface ExpenseForm {
 export function useExpenses() {
   return useQuery({
     queryKey: ["expenses"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.from("expenses").select("*").order("date", { ascending: false });
       if (error) throw error;

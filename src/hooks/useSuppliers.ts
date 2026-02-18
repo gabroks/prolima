@@ -36,6 +36,7 @@ function toInsert(form: SupplierForm): TablesInsert<"suppliers"> {
 export function useSuppliers() {
   return useQuery({
     queryKey: ["suppliers"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.from("suppliers").select("*").order("name");
       if (error) throw error;
