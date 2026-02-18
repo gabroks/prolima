@@ -17,6 +17,7 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { BudgetStatusChart } from "@/components/dashboard/BudgetStatusChart";
 import { RecentBudgets } from "@/components/dashboard/RecentBudgets";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { ExpiringBudgets } from "@/components/dashboard/ExpiringBudgets";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -105,6 +106,7 @@ export default function Dashboard() {
   const summaryCards = [
     { title: "Clientes", value: clients.length, subtitle: `${activeClients} ativo${activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
     { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovado${approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
+    { title: "Materiais", value: materials.length, subtitle: `${materialCategories} categoria${materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
     { title: "Fornecedores", value: suppliers.length, subtitle: `${activeSuppliers} ativo${activeSuppliers !== 1 ? "s" : ""}`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
     { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro", negative: monthSaldo < 0 },
   ];
@@ -183,6 +185,9 @@ export default function Dashboard() {
         <RecentBudgets budgets={budgets} />
         <RecentActivity payments={payments} expenses={expenses} budgets={budgets} />
       </div>
+
+      {/* Expiring Budgets */}
+      <ExpiringBudgets budgets={budgets} />
     </div>
   );
 }
