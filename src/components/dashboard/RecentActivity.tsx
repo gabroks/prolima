@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock, DollarSign, Receipt, FileText } from "lucide-react";
 import { formatCurrency, formatRelativeDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
+import { useNavigate } from "react-router-dom";
 import type { BudgetWithItems } from "@/hooks/useBudgets";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -12,6 +13,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ payments, expenses, budgets }: RecentActivityProps) {
+  const navigate = useNavigate();
   const activityFeed = useMemo(() => {
     const items = [
       ...payments.map((p) => ({
@@ -21,6 +23,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         date: p.date,
         icon: DollarSign,
         iconBg: "bg-primary/10 text-primary",
+        href: "/financeiro",
       })),
       ...expenses.map((e) => ({
         id: `exp-${e.id}`,
@@ -29,6 +32,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         date: e.date,
         icon: Receipt,
         iconBg: "bg-destructive/10 text-destructive",
+        href: "/despesas",
       })),
       ...budgets.map((b) => ({
         id: `bud-${b.id}`,
@@ -37,6 +41,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         date: b.created_at,
         icon: FileText,
         iconBg: "bg-info/10 text-info",
+        href: `/editar-orcamento/${b.id}`,
       })),
     ]
       .sort((a, b) => b.date.localeCompare(a.date))
@@ -58,7 +63,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
             <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade recente</p>
           ) : (
             activityFeed.map((item) => (
-              <div key={item.id} className="flex items-start gap-3">
+              <div key={item.id} className="flex items-start gap-3 cursor-pointer hover:bg-muted/40 -mx-2 px-2 py-1 rounded transition-colors" onClick={() => navigate(item.href)}>
                 <div className={`p-1.5 rounded-md ${item.iconBg} shrink-0 mt-0.5`}>
                   <item.icon className="h-3.5 w-3.5" />
                 </div>

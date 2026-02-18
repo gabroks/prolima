@@ -7,7 +7,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
-import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Truck } from "lucide-react";
+import { Users, Package, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -49,9 +49,9 @@ export default function Dashboard() {
   const userName = profile?.name || profile?.email?.split("@")[0] || "";
   const todayFormatted = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  const now = new Date();
-  const currentMonthKey = useMemo(() => getMonthKey(now), []);
-  const prevMonthKey = useMemo(() => getPrevMonthKey(now), []);
+  const now = useMemo(() => new Date(), []);
+  const currentMonthKey = useMemo(() => getMonthKey(now), [now]);
+  const prevMonthKey = useMemo(() => getPrevMonthKey(now), [now]);
 
   const monthPayments = useMemo(() => payments.filter((p) => p.date.startsWith(currentMonthKey)), [payments, currentMonthKey]);
   const monthExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(currentMonthKey)), [expenses, currentMonthKey]);
@@ -85,7 +85,7 @@ export default function Dashboard() {
   const summaryCards = [
     { title: "Clientes", value: clients.length, subtitle: `${clients.filter((c) => c.status === "active").length} ativos`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
     { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovados`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
-    { title: "Fornecedores", value: suppliers.length, subtitle: `${suppliers.filter(s => s.active).length} ativos`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
+    { title: "Materiais", value: materials.length, subtitle: `${materials.length} cadastrados`, icon: Package, trend: null, trendUp: true, href: "/materiais" },
     { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro" },
   ];
 
