@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -358,29 +359,12 @@ export default function Financial() {
         </TabsContent>
       </Tabs>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-muted-foreground">
-          Exibindo {filteredPayments.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filteredPayments.length)} de {filteredPayments.length} pagamentos
-          {activeFiltersCount > 0 && (
-            <> • Filtros: {[
-              methodFilter !== "all" && methodFilter,
-              periodFilter !== "all" && (periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"),
-              search && `"${search}"`,
-            ].filter(Boolean).join(", ")}</>
-          )}
-        </p>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-primary tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-              <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
-            </div>
-          )}
-        </div>
-      </div>
+      <PaginationFooter
+        page={page} totalPages={totalPages} totalItems={filteredPayments.length} pageSize={PAGE_SIZE}
+        onPageChange={setPage} label="pagamentos"
+        extraInfo={<span className="text-xs font-semibold text-primary tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span>}
+        filterSummary={activeFiltersCount > 0 ? [methodFilter !== "all" && methodFilter, periodFilter !== "all" && (periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"), search && `"${search}"`].filter(Boolean).join(", ") : undefined}
+      />
 
       <PaymentFormDialog
         open={dialogOpen}
@@ -393,28 +377,11 @@ export default function Financial() {
         isSaving={createPayment.isPending || updatePayment.isPending}
       />
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir pagamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {paymentToDelete && (
-                <span className="block mb-2 font-medium text-foreground">
-                  "{paymentToDelete.client_name}" — {formatCurrency(Number(paymentToDelete.amount))} via {paymentToDelete.method}
-                  {paymentToDelete.budget_number && ` • Orç. ${paymentToDelete.budget_number}`}
-                </span>
-              )}
-              Esta ação não pode ser desfeita. O pagamento será removido permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deletePaymentMut.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deletePaymentMut.isPending ? "Excluindo…" : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteId} onOpenChange={() => setDeleteId(null)} onConfirm={handleDelete}
+        title="Excluir pagamento?" isDeleting={deletePaymentMut.isPending}
+        description={<>{paymentToDelete && <span className="block mb-2 font-medium text-foreground">"{paymentToDelete.client_name}" — {formatCurrency(Number(paymentToDelete.amount))} via {paymentToDelete.method}{paymentToDelete.budget_number && ` • Orç. ${paymentToDelete.budget_number}`}</span>}Esta ação não pode ser desfeita. O pagamento será removido permanentemente.</>}
+      />
     </div>
   );
 }
