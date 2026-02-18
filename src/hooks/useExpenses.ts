@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type DbExpense = Tables<"expenses">;
@@ -31,9 +32,12 @@ export function useExpenses() {
 
 export function useCreateExpense() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (form: ExpenseForm) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase.from("expenses").insert({
+        user_id: user.id,
         budget_id: form.budgetId || null,
         budget_number: form.budgetNumber || null,
         description: form.description,
@@ -54,9 +58,12 @@ export function useCreateExpense() {
 
 export function useUpdateExpense() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, form }: { id: string; form: ExpenseForm }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase.from("expenses").update({
+        user_id: user.id,
         budget_id: form.budgetId || null,
         budget_number: form.budgetNumber || null,
         description: form.description,

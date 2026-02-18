@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type DbClient = Tables<"clients">;
@@ -20,8 +21,9 @@ export interface ClientForm {
   status?: "active" | "inactive";
 }
 
-function toInsert(form: ClientForm): TablesInsert<"clients"> {
+function toInsert(form: ClientForm, userId: string): TablesInsert<"clients"> {
   return {
+    user_id: userId,
     name: form.name,
     phone: form.phone,
     person_type: form.personType,
@@ -54,9 +56,10 @@ export function useClients() {
 
 export function useCreateClient() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (form: ClientForm) => {
-      // Quota enforcement
+      if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("system_limits").select("max_clients").limit(1).single(),
@@ -67,7 +70,7 @@ export function useCreateClient() {
 
       const { data, error } = await supabase
         .from("clients")
-        .insert(toInsert(form))
+        .insert(toInsert(form, user.id))
         .select()
         .single();
       if (error) throw error;
@@ -84,11 +87,13 @@ export function useCreateClient() {
 
 export function useUpdateClient() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, form }: { id: string; form: ClientForm }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase
         .from("clients")
-        .update(toInsert(form) as TablesUpdate<"clients">)
+        .update(toInsert(form, user.id) as TablesUpdate<"clients">)
         .eq("id", id);
       if (error) throw error;
     },

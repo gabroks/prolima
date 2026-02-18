@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type DbSupplier = Tables<"suppliers">;
@@ -18,8 +19,9 @@ export interface SupplierForm {
   active?: boolean;
 }
 
-function toInsert(form: SupplierForm): TablesInsert<"suppliers"> {
+function toInsert(form: SupplierForm, userId: string): TablesInsert<"suppliers"> {
   return {
+    user_id: userId,
     name: form.name,
     person_type: form.personType,
     document: form.document || null,
@@ -47,8 +49,10 @@ export function useSuppliers() {
 
 export function useCreateSupplier() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (form: SupplierForm) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("suppliers").select("id", { count: "exact", head: true }),
         supabase.from("system_limits").select("max_suppliers").limit(1).single(),
@@ -57,7 +61,7 @@ export function useCreateSupplier() {
         throw new Error(`Limite de fornecedores atingido (${count}/${limits.max_suppliers}). Contate o administrador.`);
       }
 
-      const { data, error } = await supabase.from("suppliers").insert(toInsert(form)).select().single();
+      const { data, error } = await supabase.from("suppliers").insert(toInsert(form, user.id)).select().single();
       if (error) throw error;
       return data;
     },
@@ -72,9 +76,11 @@ export function useCreateSupplier() {
 
 export function useUpdateSupplier() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, form }: { id: string; form: SupplierForm }) => {
-      const { error } = await supabase.from("suppliers").update(toInsert(form) as TablesUpdate<"suppliers">).eq("id", id);
+      if (!user) throw new Error("Usuário não autenticado");
+      const { error } = await supabase.from("suppliers").update(toInsert(form, user.id) as TablesUpdate<"suppliers">).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor atualizado!"); },
