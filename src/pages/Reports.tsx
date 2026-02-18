@@ -194,10 +194,15 @@ export default function Reports() {
     return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
   }, [filteredExpenses]);
 
-  // City distribution
+  // City + neighborhood distribution
   const cityData = useMemo(() => {
     const map: Record<string, number> = {};
-    clients.forEach(c => { map[c.city || "Sem cidade"] = (map[c.city || "Sem cidade"] || 0) + 1; });
+    clients.forEach(c => {
+      const city = c.city || "Sem cidade";
+      const neighborhood = c.neighborhood;
+      const label = neighborhood ? `${city} — ${neighborhood}` : city;
+      map[label] = (map[label] || 0) + 1;
+    });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
   }, [clients]);
 
@@ -522,7 +527,7 @@ export default function Reports() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />Distribuição por Cidade
+              <MapPin className="h-4 w-4 text-primary" />Distribuição por Cidades e Bairros
             </CardTitle>
           </CardHeader>
           <CardContent>
