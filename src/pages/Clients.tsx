@@ -12,13 +12,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useToggleClientStatus, ClientForm, DbClient } from "@/hooks/useClients";
+import { useBudgets } from "@/hooks/useBudgets";
 import { QuotaButton } from "@/components/QuotaButton";
 import {
   Plus, Search, Pencil, Trash2, Users, UserCheck, UserX, Building2,
-  ArrowUpDown, Phone, Mail, MapPin, MessageCircle,
+  ArrowUpDown, Phone, Mail, MapPin, MessageCircle, FileText, DollarSign,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "@/lib/formatters";
+import { formatDate, formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 
 type SortKey = "name" | "date-desc" | "date-asc" | "city";
@@ -29,10 +31,24 @@ const emptyForm: ClientForm = { name: "", phone: "", personType: "fisica", docum
 export default function Clients() {
   const navigate = useNavigate();
   const { data: clients = [], isLoading } = useClients();
+  const { data: budgets = [] } = useBudgets();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   const toggleStatus = useToggleClientStatus();
+
+  // Pre-compute budget stats per client
+  const clientStats = useMemo(() => {
+    const map = new Map<string, { count: number; total: number; approved: number }>();
+    budgets.forEach(b => {
+      const prev = map.get(b.client_id || "") || { count: 0, total: 0, approved: 0 };
+      prev.count++;
+      prev.total += Number(b.total);
+      if (b.status === "approved") prev.approved++;
+      map.set(b.client_id || "", prev);
+    });
+    return map;
+  }, [budgets]);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -74,6 +90,7 @@ export default function Clients() {
 
   const activeCount = clients.filter(c => c.status === "active").length;
   const pjCount = clients.filter(c => c.person_type === "juridica").length;
+  const totalBudgetValue = useMemo(() => budgets.reduce((s, b) => s + Number(b.total), 0), [budgets]);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (client: DbClient, e: React.MouseEvent) => {
@@ -151,10 +168,10 @@ export default function Clients() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: clients.length, icon: Users, color: "text-primary" },
-          { label: "Ativos", value: activeCount, icon: UserCheck, color: "text-primary" },
-          { label: "Inativos", value: clients.length - activeCount, icon: UserX, color: "text-destructive" },
-          { label: "Pessoa Jurídica", value: pjCount, icon: Building2, color: "text-primary" },
+          { label: "Total", value: String(clients.length), icon: Users, color: "text-primary" },
+          { label: "Ativos", value: String(activeCount), icon: UserCheck, color: "text-primary" },
+          { label: "Pessoa Jurídica", value: String(pjCount), icon: Building2, color: "text-primary" },
+          { label: "Valor Gerado", value: formatCurrency(totalBudgetValue), icon: DollarSign, color: "text-primary" },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center gap-3">
@@ -215,6 +232,7 @@ export default function Clients() {
                 <TableHead>Cliente</TableHead>
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
                 <TableHead className="hidden lg:table-cell">Localização</TableHead>
+                <TableHead className="hidden xl:table-cell">Orçamentos</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -222,7 +240,7 @@ export default function Clients() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p>{search || statusFilter !== "all" || typeFilter !== "all" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</p>
                     {!search && statusFilter === "all" && typeFilter === "all" && (
@@ -235,18 +253,25 @@ export default function Clients() {
               ) : paged.map((c) => (
                 <TableRow key={c.id} className="group cursor-pointer" onClick={() => navigate(`/clientes/${c.id}`)}>
                   <TableCell>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-primary hover:underline">{c.name}</p>
-                        <Badge variant="outline" className="text-[9px] h-4 px-1">
-                          {c.person_type === "fisica" ? "PF" : "PJ"}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground font-mono mt-0.5">{c.document}</p>
-                      <div className="flex gap-2 mt-1 md:hidden">
-                        <a href={`tel:${c.phone}`} className="text-xs text-primary flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                          <Phone className="h-3 w-3" />{c.phone}
-                        </a>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {getInitials(c.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-primary hover:underline">{c.name}</p>
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">
+                            {c.person_type === "fisica" ? "PF" : "PJ"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{c.document}</p>
+                        <div className="flex gap-2 mt-1 md:hidden">
+                          <a href={`tel:${c.phone}`} className="text-xs text-primary flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                            <Phone className="h-3 w-3" />{c.phone}
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -269,6 +294,25 @@ export default function Clients() {
                         {c.city}{c.neighborhood ? `, ${c.neighborhood}` : ""}
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    {(() => {
+                      const stats = clientStats.get(c.id);
+                      if (!stats || stats.count === 0) return <span className="text-muted-foreground text-xs">—</span>;
+                      return (
+                        <div>
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="font-medium tabular-nums">{stats.count}</span>
+                            <span className="text-muted-foreground text-xs">({stats.approved} aprov.)</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground tabular-nums mt-0.5 flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {formatCurrency(stats.total)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -401,7 +445,13 @@ export default function Clients() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O cliente e todo o histórico associado serão removidos permanentemente.
+              {(() => {
+                const stats = deleteId ? clientStats.get(deleteId) : null;
+                if (stats && stats.count > 0) {
+                  return `⚠️ Este cliente possui ${stats.count} orçamento${stats.count !== 1 ? "s" : ""} vinculado${stats.count !== 1 ? "s" : ""} (${formatCurrency(stats.total)}). A exclusão é permanente e não pode ser desfeita.`;
+                }
+                return "Esta ação não pode ser desfeita. O cliente será removido permanentemente.";
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
