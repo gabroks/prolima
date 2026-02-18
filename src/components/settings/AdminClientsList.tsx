@@ -108,7 +108,7 @@ export function AdminClientsList() {
   };
 
   const getValidityInfo = (validUntil: string | null) => {
-    if (!validUntil) return { label: "Sem validade", daysLeft: 0, expired: true };
+    if (!validUntil) return { label: "Ilimitado", daysLeft: Infinity, expired: false, unlimited: true };
     const date = new Date(validUntil);
     const days = differenceInDays(date, new Date());
 
@@ -266,19 +266,30 @@ export function AdminClientsList() {
                         {/* VALIDADE */}
                         <TableCell className="hidden sm:table-cell">
                           <div className="min-w-0">
-                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              <CalendarPlus className="h-3 w-3 shrink-0" />
-                              {p.valid_until ? format(new Date(p.valid_until), "dd/MM/yyyy") : "—"}
-                            </p>
-                            <p className={`text-xs font-medium mt-0.5 ${
-                              validity.expired 
-                                ? "text-destructive" 
-                                : validity.daysLeft <= 7 
-                                  ? "text-yellow-600 dark:text-yellow-400" 
-                                  : "text-primary"
-                            }`}>
-                              {validity.label}
-                            </p>
+                            {(validity as any).unlimited ? (
+                              <>
+                                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <CalendarPlus className="h-3 w-3 shrink-0" />∞
+                                </p>
+                                <p className="text-xs font-medium mt-0.5 text-primary">Ilimitado</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <CalendarPlus className="h-3 w-3 shrink-0" />
+                                  {p.valid_until ? format(new Date(p.valid_until), "dd/MM/yyyy") : "—"}
+                                </p>
+                                <p className={`text-xs font-medium mt-0.5 ${
+                                  validity.expired 
+                                    ? "text-destructive" 
+                                    : validity.daysLeft <= 7 
+                                      ? "text-yellow-600 dark:text-yellow-400" 
+                                      : "text-primary"
+                                }`}>
+                                  {validity.label}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </TableCell>
 
