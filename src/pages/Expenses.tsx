@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -337,33 +338,12 @@ export default function Expenses() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-muted-foreground">
-          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} despesas
-          {activeFiltersCount > 0 && (
-            <> • Filtros: {[
-              categoryFilter !== "all" && categoryFilter,
-              supplierFilter !== "all" && supplierFilter !== "none" && expenseSuppliers.find(s => s.id === supplierFilter)?.name,
-              supplierFilter === "none" && "Sem fornecedor",
-              periodFilter !== "all" && (periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"),
-              budgetFilter !== "all" && budgetFilter !== "none" && `Orç. ${budgets.find(b => b.id === budgetFilter)?.number}`,
-              budgetFilter === "none" && "Sem orçamento",
-              search && `"${search}"`,
-            ].filter(Boolean).join(", ")}</>
-          )}
-        </p>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-destructive tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-              <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
-            </div>
-          )}
-        </div>
-      </div>
+      <PaginationFooter
+        page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE}
+        onPageChange={setPage} label="despesas"
+        extraInfo={<span className="text-xs font-semibold text-destructive tabular-nums">Total filtrado: {formatCurrency(filteredTotal)}</span>}
+        filterSummary={activeFiltersCount > 0 ? [categoryFilter !== "all" && categoryFilter, supplierFilter !== "all" && supplierFilter !== "none" && expenseSuppliers.find(s => s.id === supplierFilter)?.name, supplierFilter === "none" && "Sem fornecedor", periodFilter !== "all" && (periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"), budgetFilter !== "all" && budgetFilter !== "none" && `Orç. ${budgets.find(b => b.id === budgetFilter)?.number}`, budgetFilter === "none" && "Sem orçamento", search && `"${search}"`].filter(Boolean).join(", ") : undefined}
+      />
 
       <ExpenseFormDialog
         open={dialogOpen}
@@ -377,29 +357,11 @@ export default function Expenses() {
         isSaving={createExpense.isPending || updateExpense.isPending}
       />
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {expenseToDelete && (
-                <span className="block mb-2 font-medium text-foreground">
-                  "{expenseToDelete.description}" — {formatCurrency(Number(expenseToDelete.amount))}
-                  {expenseToDelete.supplier_name && ` • ${expenseToDelete.supplier_name}`}
-                  {expenseToDelete.budget_number && ` • Orç. ${expenseToDelete.budget_number}`}
-                </span>
-              )}
-              Esta ação não pode ser desfeita. A despesa será removida permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteExpenseMut.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteExpenseMut.isPending ? "Excluindo…" : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteId} onOpenChange={() => setDeleteId(null)} onConfirm={handleDelete}
+        title="Excluir despesa?" isDeleting={deleteExpenseMut.isPending}
+        description={<>{expenseToDelete && <span className="block mb-2 font-medium text-foreground">"{expenseToDelete.description}" — {formatCurrency(Number(expenseToDelete.amount))}{expenseToDelete.supplier_name && ` • ${expenseToDelete.supplier_name}`}{expenseToDelete.budget_number && ` • Orç. ${expenseToDelete.budget_number}`}</span>}Esta ação não pode ser desfeita. A despesa será removida permanentemente.</>}
+      />
     </div>
   );
 }

@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -305,24 +306,11 @@ export default function Materials() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-muted-foreground">
-          Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} materiais
-          {activeFiltersCount > 0 && (
-            <> • Filtros: {[
-              categoryFilter !== "all" && categoryFilter,
-              search && `"${search}"`,
-            ].filter(Boolean).join(", ")}</>
-          )}
-        </p>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-            <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
-            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
-          </div>
-        )}
-      </div>
+      <PaginationFooter
+        page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE}
+        onPageChange={setPage} label="materiais"
+        filterSummary={activeFiltersCount > 0 ? [categoryFilter !== "all" && categoryFilter, search && `"${search}"`].filter(Boolean).join(", ") : undefined}
+      />
 
       <MaterialFormDialog
         open={dialogOpen}
@@ -335,33 +323,11 @@ export default function Materials() {
         categories={categories}
       />
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir material?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {materialToDelete && (
-                <span className="block mb-2 font-medium text-foreground">
-                  "{materialToDelete.name}" — {materialToDelete.category} — {formatCurrency(materialToDelete.base_price)}/{materialToDelete.charge_unit}
-                </span>
-              )}
-              {(() => {
-                const usage = deleteId ? materialUsageStats.get(deleteId) : null;
-                if (usage && usage.budgetCount > 0) {
-                  return `⚠️ Este material está sendo usado em ${usage.budgetCount} orçamento${usage.budgetCount !== 1 ? "s" : ""} (${usage.itemCount} item${usage.itemCount !== 1 ? "ns" : ""}). A exclusão é permanente e não pode ser desfeita.`;
-                }
-                return "Esta ação não pode ser desfeita. O material será removido do catálogo.";
-              })()}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteMaterial.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteMaterial.isPending ? "Excluindo…" : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteId} onOpenChange={() => setDeleteId(null)} onConfirm={handleDelete}
+        title="Excluir material?" isDeleting={deleteMaterial.isPending}
+        description={<>{materialToDelete && <span className="block mb-2 font-medium text-foreground">"{materialToDelete.name}" — {materialToDelete.category} — {formatCurrency(materialToDelete.base_price)}/{materialToDelete.charge_unit}</span>}{(() => { const usage = deleteId ? materialUsageStats.get(deleteId) : null; if (usage && usage.budgetCount > 0) return `⚠️ Este material está sendo usado em ${usage.budgetCount} orçamento${usage.budgetCount !== 1 ? "s" : ""} (${usage.itemCount} item${usage.itemCount !== 1 ? "ns" : ""}). A exclusão é permanente e não pode ser desfeita.`; return "Esta ação não pode ser desfeita. O material será removido do catálogo."; })()}</>}
+      />
     </div>
   );
 }

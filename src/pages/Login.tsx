@@ -106,9 +106,9 @@ export default function Login() {
   if (user) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen flex">
+    <main className="min-h-screen flex" role="main" aria-label="Página de autenticação">
       {/* Left panel - branding */}
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-primary via-primary/80 to-primary/40 flex-col justify-between p-12 text-primary-foreground">
+      <aside className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-primary via-primary/80 to-primary/40 flex-col justify-between p-12 text-primary-foreground" aria-label="Apresentação do sistema">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary-foreground/15 backdrop-blur flex items-center justify-center">
             <Shield className="h-6 w-6" />
@@ -139,10 +139,10 @@ export default function Login() {
         </div>
 
         <p className="text-sm opacity-30">© {new Date().getFullYear()} Pro Orçamento. Todos os direitos reservados.</p>
-      </div>
+      </aside>
 
       {/* Right panel - form */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-muted/40">
+      <section className="flex-1 flex items-center justify-center p-6 bg-muted/40" aria-label="Formulário de login">
         <div className="w-full max-w-sm">
           {/* Mobile brand */}
           <div className="flex items-center gap-2.5 mb-8 lg:hidden">
@@ -270,7 +270,7 @@ export default function Login() {
             </button>
           </p>
         </div>
-      </div>
+      </section>
 
       {/* Forgot Password Dialog */}
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
@@ -317,6 +317,6 @@ export default function Login() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </main>
   );
 }
