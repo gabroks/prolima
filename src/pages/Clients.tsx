@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useToggleClientStatus, ClientForm, DbClient } from "@/hooks/useClients";
+import { QuotaButton } from "@/components/QuotaButton";
 import {
   Plus, Search, Pencil, Trash2, Users, UserCheck, UserX, Building2,
   ArrowUpDown, Phone, Mail, MapPin, MessageCircle,
@@ -143,9 +144,9 @@ export default function Clients() {
           <h2 className="text-2xl font-bold">Clientes</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie sua carteira de clientes</p>
         </div>
-        <Button onClick={openNew} className="shadow-md shadow-primary/20">
+        <QuotaButton resource="clients" onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Novo Cliente
-        </Button>
+        </QuotaButton>
       </div>
 
       {/* Summary cards */}

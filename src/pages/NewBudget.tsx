@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useClients } from "@/hooks/useClients";
 import { useMaterials } from "@/hooks/useMaterials";
 import { useBudgetCount, useCreateBudget, useUpdateBudget, useBudgetById, type BudgetFormData } from "@/hooks/useBudgets";
+import { useQuotaCheck } from "@/hooks/useQuotaCheck";
 import { BudgetItem } from "@/types";
 import {
   Plus, Trash2, FileText, Package, ChevronRight, ChevronLeft,
@@ -48,6 +49,7 @@ export default function NewBudget() {
   const { data: existingBudget, isLoading: loadingBudget } = useBudgetById(editId);
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
+  const budgetQuota = useQuotaCheck("budgets");
 
   const budgetNumber = useMemo(() => {
     if (isEditMode && existingBudget) return existingBudget.number;
@@ -141,6 +143,7 @@ export default function NewBudget() {
   const isSaving = createBudget.isPending || updateBudget.isPending;
 
   const handleSave = (asDraft: boolean) => {
+    if (!isEditMode && budgetQuota.isAtLimit) { toast.error(budgetQuota.message!); return; }
     if (!clientId) { toast.error("Selecione um cliente"); setStep(1); return; }
     if (items.length === 0) { toast.error("Adicione pelo menos um item"); setStep(2); return; }
     const formData: BudgetFormData = {
@@ -170,6 +173,12 @@ export default function NewBudget() {
         </div>
         <Button variant="outline" size="sm" onClick={() => navigate("/orcamentos")}><X className="h-4 w-4 mr-1.5" />Cancelar</Button>
       </div>
+      {!isEditMode && budgetQuota.isAtLimit && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{budgetQuota.message}</span>
+        </div>
+      )}
       <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-2">
         {STEPS.map((s) => (
           <button key={s.id} onClick={() => setStep(s.id)} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${step === s.id ? "bg-background text-primary shadow-sm" : step > s.id ? "text-primary/70 hover:bg-background/50" : "text-muted-foreground hover:bg-background/50"}`}>
