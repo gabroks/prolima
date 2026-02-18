@@ -87,8 +87,9 @@ export function RevenueChart({ payments, expenses }: RevenueChartProps) {
                 iconSize={8}
                 formatter={(value) => <span style={{ fontSize: "11px", color: "hsl(var(--muted-foreground))" }}>{value}</span>}
               />
-              <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={40} />
-              <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} maxBarSize={40} opacity={0.85} />
+              <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={36} />
+              <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} maxBarSize={36} opacity={0.8} />
+              <Bar dataKey="saldo" name="Saldo" fill="hsl(var(--muted-foreground))" radius={[6, 6, 0, 0]} maxBarSize={24} opacity={0.35} />
             </BarChart>
           </ResponsiveContainer>
         )}
