@@ -141,7 +141,7 @@ export default function Budgets() {
               <TableCell className="hidden sm:table-cell">{b.status === "approved" && paid > 0 ? <div className="space-y-1"><span className="text-xs tabular-nums text-primary">{formatCurrency(paid)}</span><Progress value={paidPct} className="h-1.5 w-16" /></div> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
               <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/editar-orcamento/${b.id}`)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadBudgetPdf(b, companySettings).then(() => toast.success("PDF gerado!"))} title="Baixar PDF"><Download className="h-3.5 w-3.5" /></Button>
