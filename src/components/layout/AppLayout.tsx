@@ -125,7 +125,11 @@ export function AppLayout() {
                     onClick={() => navigate("/notificacoes")}
                   >
                     <Bell className="h-4 w-4" />
-                    {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />}
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">Notificações</TooltipContent>

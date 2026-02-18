@@ -161,7 +161,7 @@ export function AppSidebar() {
                   activeClassName="bg-sidebar-accent text-sidebar-primary"
                 >
                   <Bell className="h-3.5 w-3.5" />
-                  {unreadCount > 0 && <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-sidebar-primary ring-1 ring-sidebar-background animate-pulse" />}
+                  {unreadCount > 0 && <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-sidebar-primary ring-1 ring-sidebar-background" />}
                 </NavLink>
               </TooltipTrigger>
               <TooltipContent side="right" className="text-xs">Notificações</TooltipContent>
@@ -204,7 +204,7 @@ export function AppSidebar() {
 
         <MenuGroup label="Cadastros" items={cadastroItems} defaultOpen />
         <MenuGroup label="Orçamentos" items={orcamentoItems} defaultOpen />
-        <MenuGroup label="Financeiro" items={financeiroItems} />
+        <MenuGroup label="Financeiro" items={financeiroItems} defaultOpen />
 
         <SidebarSeparator className="my-1" />
 
