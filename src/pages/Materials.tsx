@@ -12,7 +12,7 @@ import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, 
 import { useBudgets } from "@/hooks/useBudgets";
 import { QuotaButton } from "@/components/QuotaButton";
 import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
-import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, DollarSign, Layers, ClipboardList } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, DollarSign, Layers, ClipboardList, TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 
@@ -45,7 +45,7 @@ export default function Materials() {
   const filtered = useMemo(() => {
     let result = materials.filter((m) => {
       const q = search.toLowerCase();
-      const matchSearch = m.name.toLowerCase().includes(q) || m.category?.toLowerCase().includes(q);
+      const matchSearch = !q || m.name.toLowerCase().includes(q) || m.category?.toLowerCase().includes(q) || m.notes?.toLowerCase().includes(q);
       const matchCategory = categoryFilter === "all" || m.category === categoryFilter;
       return matchSearch && matchCategory;
     });
@@ -65,6 +65,8 @@ export default function Materials() {
   const resetPage = () => setPage(0);
 
   const avgPrice = materials.length > 0 ? materials.reduce((s, m) => s + m.base_price, 0) / materials.length : 0;
+  const maxPrice = materials.length > 0 ? Math.max(...materials.map(m => m.base_price)) : 0;
+  const minPrice = materials.length > 0 ? Math.min(...materials.map(m => m.base_price)) : 0;
 
   // Material usage stats from budget_items
   const materialUsageStats = useMemo(() => {
@@ -87,6 +89,16 @@ export default function Materials() {
     return map;
   }, [budgets]);
   const materialsInUse = new Set(materialUsageStats.keys()).size;
+  const unusedCount = materials.length - materialsInUse;
+
+  // Active filters count
+  const activeFiltersCount = [categoryFilter !== "all", !!search].filter(Boolean).length;
+
+  // Delete dialog: find material info
+  const materialToDelete = useMemo(() => {
+    if (!deleteId) return null;
+    return materials.find(m => m.id === deleteId) || null;
+  }, [deleteId, materials]);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (m: DbMaterial) => {
@@ -115,8 +127,6 @@ export default function Materials() {
     deleteMaterial.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
 
-  const updateField = (field: keyof MaterialForm, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -134,7 +144,12 @@ export default function Materials() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">Materiais</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie o catálogo de materiais e preços</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gerencie o catálogo de materiais e preços
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 text-primary font-medium">• {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""} ativo{activeFiltersCount > 1 ? "s" : ""}</span>
+            )}
+          </p>
         </div>
         <QuotaButton resource="materials" onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Novo Material
@@ -144,19 +159,22 @@ export default function Materials() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: materials.length, icon: Package },
-          { label: "Categorias", value: categories.length, icon: Layers },
-          { label: "Preço Médio", value: formatCurrency(avgPrice), icon: DollarSign },
-          { label: "Em Uso", value: materialsInUse, icon: ClipboardList },
+          { label: "Total", value: String(materials.length), icon: Package, bgColor: "bg-primary/10", iconColor: "text-primary", extra: `${categories.length} categoria${categories.length !== 1 ? "s" : ""}` },
+          { label: "Preço Médio", value: formatCurrency(avgPrice), icon: DollarSign, bgColor: "bg-primary/10", iconColor: "text-primary", extra: `${formatCurrency(minPrice)} – ${formatCurrency(maxPrice)}` },
+          { label: "Em Uso", value: String(materialsInUse), icon: ClipboardList, bgColor: materialsInUse > 0 ? "bg-primary/10" : "bg-muted", iconColor: materialsInUse > 0 ? "text-primary" : "text-muted-foreground", extra: unusedCount > 0 ? `${unusedCount} sem uso` : null },
+          { label: "Categorias", value: String(categories.length), icon: Layers, bgColor: "bg-primary/10", iconColor: "text-primary", extra: categories.length > 0 ? categories.slice(0, 2).join(", ") + (categories.length > 2 ? "…" : "") : null },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <s.icon className="h-5 w-5 text-primary" />
+              <div className={`h-10 w-10 rounded-lg ${s.bgColor} flex items-center justify-center`}>
+                <s.icon className={`h-5 w-5 ${s.iconColor}`} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-lg font-bold tabular-nums">{s.value}</p>
+                <p className="text-lg font-bold tabular-nums truncate">{s.value}</p>
+                {"extra" in s && s.extra && (
+                  <p className="text-[10px] text-muted-foreground truncate">{s.extra}</p>
+                )}
               </div>
             </div>
           </Card>
@@ -167,10 +185,13 @@ export default function Materials() {
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou categoria…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
+          <Input placeholder="Buscar por nome, categoria ou observação…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
         </div>
         <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+          <SelectTrigger className="w-[160px]">
+            <Layers className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas categorias</SelectItem>
             {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -188,6 +209,11 @@ export default function Materials() {
             <SelectItem value="category">Categoria</SelectItem>
           </SelectContent>
         </Select>
+        {activeFiltersCount > 0 && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setSearch(""); setCategoryFilter("all"); resetPage(); }}>
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -210,8 +236,8 @@ export default function Materials() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{search || categoryFilter !== "all" ? "Nenhum material encontrado" : "Nenhum material cadastrado"}</p>
-                    {!search && categoryFilter === "all" && (
+                    <p>{activeFiltersCount > 0 ? "Nenhum material encontrado" : "Nenhum material cadastrado"}</p>
+                    {activeFiltersCount === 0 && (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro material
                       </Button>
@@ -220,6 +246,7 @@ export default function Materials() {
                 </TableRow>
               ) : paged.map((m) => {
                 const usage = materialUsageStats.get(m.id);
+                const priceVsAvg = avgPrice > 0 ? ((m.base_price - avgPrice) / avgPrice) * 100 : 0;
                 return (
                 <TableRow key={m.id} className="group">
                   <TableCell>
@@ -249,7 +276,18 @@ export default function Materials() {
                       </div>
                     ) : <span className="text-muted-foreground text-xs">—</span>}
                   </TableCell>
-                  <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(m.base_price)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <span className="tabular-nums font-semibold text-primary">{formatCurrency(m.base_price)}</span>
+                      {materials.length > 1 && Math.abs(priceVsAvg) > 10 && (
+                        priceVsAvg > 0 ? (
+                          <TrendingUp className="h-3 w-3 text-destructive" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-primary" />
+                        )
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(m)}>
@@ -270,7 +308,12 @@ export default function Materials() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs text-muted-foreground">
           Exibindo {filtered.length > 0 ? page * PAGE_SIZE + 1 : 0}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} materiais
-          {categoryFilter !== "all" && <> • Filtro: <span className="font-medium text-foreground">{categoryFilter}</span></>}
+          {activeFiltersCount > 0 && (
+            <> • Filtros: {[
+              categoryFilter !== "all" && categoryFilter,
+              search && `"${search}"`,
+            ].filter(Boolean).join(", ")}</>
+          )}
         </p>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
@@ -297,6 +340,11 @@ export default function Materials() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir material?</AlertDialogTitle>
             <AlertDialogDescription>
+              {materialToDelete && (
+                <span className="block mb-2 font-medium text-foreground">
+                  "{materialToDelete.name}" — {materialToDelete.category} — {formatCurrency(materialToDelete.base_price)}/{materialToDelete.charge_unit}
+                </span>
+              )}
               {(() => {
                 const usage = deleteId ? materialUsageStats.get(deleteId) : null;
                 if (usage && usage.budgetCount > 0) {
