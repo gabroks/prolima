@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, MaterialForm, DbMaterial } from "@/hooks/useMaterials";
+import { QuotaButton } from "@/components/QuotaButton";
 import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, Tag, DollarSign, Layers } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -116,9 +117,9 @@ export default function Materials() {
           <h2 className="text-2xl font-bold">Materiais</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie o catálogo de materiais e preços</p>
         </div>
-        <Button onClick={openNew} className="shadow-md shadow-primary/20">
+        <QuotaButton resource="materials" onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Novo Material
-        </Button>
+        </QuotaButton>
       </div>
 
       {/* Stats */}

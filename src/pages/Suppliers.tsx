@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, useToggleSupplierActive, type SupplierForm, type DbSupplier } from "@/hooks/useSuppliers";
+import { QuotaButton } from "@/components/QuotaButton";
 import { useExpenses } from "@/hooks/useExpenses";
 import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
@@ -120,9 +121,9 @@ export default function Suppliers() {
           <h2 className="text-2xl font-bold">Fornecedores</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie seus fornecedores e contatos</p>
         </div>
-        <Button onClick={openNew} className="shadow-md shadow-primary/20">
+        <QuotaButton resource="suppliers" onClick={openNew} className="shadow-md shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />Novo Fornecedor
-        </Button>
+        </QuotaButton>
       </div>
 
       {/* Stats */}
