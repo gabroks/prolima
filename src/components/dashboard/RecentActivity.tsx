@@ -36,7 +36,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         subtitle: budgetStatusConfig[b.status as BudgetStatus]?.label,
         date: b.created_at,
         icon: FileText,
-        iconBg: "bg-muted text-muted-foreground",
+        iconBg: "bg-info/10 text-info",
       })),
     ]
       .sort((a, b) => b.date.localeCompare(a.date))
