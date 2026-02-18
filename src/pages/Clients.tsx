@@ -1,24 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MaskedInput } from "@/components/ui/masked-input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useToggleClientStatus, ClientForm, DbClient } from "@/hooks/useClients";
 import { useBudgets } from "@/hooks/useBudgets";
 import { QuotaButton } from "@/components/QuotaButton";
+import { ClientFormDialog } from "@/components/clients/ClientFormDialog";
 import {
   Plus, Search, Pencil, Trash2, Users, UserCheck, UserX, Building2,
-  ArrowUpDown, Phone, Mail, MapPin, MessageCircle, FileText, DollarSign,
+  ArrowUpDown, Phone, Mail, MapPin, MessageCircle, FileText, DollarSign, Download,
 } from "lucide-react";
 import { formatDate, formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -148,7 +145,20 @@ export default function Clients() {
     return `https://wa.me/55${digits}`;
   };
 
-  const updateField = (field: keyof ClientForm, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const exportCSV = useCallback(() => {
+    const headers = ["Nome", "Tipo", "Documento", "Telefone", "Email", "Cidade", "Bairro", "Status"];
+    const rows = filtered.map(c => [
+      c.name, c.person_type === "fisica" ? "PF" : "PJ", c.document, c.phone,
+      c.email || "", c.city || "", c.neighborhood || "", c.status === "active" ? "Ativo" : "Inativo",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `clientes_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} clientes exportados`);
+  }, [filtered]);
 
   // Delete dialog: find client info
   const clientToDelete = useMemo(() => {
@@ -183,9 +193,17 @@ export default function Clients() {
             )}
           </p>
         </div>
-        <QuotaButton resource="clients" onClick={openNew} className="shadow-md shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" />Novo Cliente
-        </QuotaButton>
+        <div className="flex items-center gap-2">
+          {filtered.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
+          )}
+          <QuotaButton resource="clients" onClick={openNew} className="shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" />Novo Cliente
+          </QuotaButton>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -417,74 +435,15 @@ export default function Clients() {
       </div>
 
       {/* Form Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
-            <DialogDescription>Preencha os dados do cliente. Campos com * são obrigatórios.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <Label>Nome Completo *</Label>
-                <Input value={form.name || ""} onChange={(e) => updateField("name", e.target.value)} placeholder="Nome do cliente" />
-              </div>
-              <div>
-                <Label>Telefone/WhatsApp *</Label>
-                <MaskedInput mask="phone" value={form.phone || ""} onValueChange={(v) => updateField("phone", v)} placeholder="(00) 00000-0000" />
-              </div>
-              <div>
-                <Label>Tipo de Pessoa</Label>
-                <Select value={form.personType} onValueChange={(v: "fisica" | "juridica") => setForm({ ...form, personType: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fisica">Pessoa Física</SelectItem>
-                    <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>{form.personType === "juridica" ? "CNPJ *" : "CPF *"}</Label>
-                <MaskedInput mask={form.personType === "juridica" ? "cnpj" : "cpf"} value={form.document || ""} onValueChange={(v) => updateField("document", v)} placeholder={form.personType === "juridica" ? "00.000.000/0001-00" : "000.000.000-00"} />
-              </div>
-              <div>
-                <Label>E-mail</Label>
-                <Input type="email" value={form.email || ""} onChange={(e) => updateField("email", e.target.value)} placeholder="email@exemplo.com" />
-              </div>
-            </div>
-            {form.personType === "juridica" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Razão Social</Label><Input value={form.razaoSocial || ""} onChange={(e) => updateField("razaoSocial", e.target.value)} /></div>
-                <div><Label>Nome Fantasia</Label><Input value={form.nomeFantasia || ""} onChange={(e) => updateField("nomeFantasia", e.target.value)} /></div>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><Label>Contato</Label><Input value={form.contact || ""} onChange={(e) => updateField("contact", e.target.value)} placeholder="Nome do contato" /></div>
-              <div><Label>Cidade</Label><Input value={form.city || ""} onChange={(e) => updateField("city", e.target.value)} /></div>
-              <div><Label>Bairro</Label><Input value={form.neighborhood || ""} onChange={(e) => updateField("neighborhood", e.target.value)} /></div>
-              <div><Label>Endereço</Label><Input value={form.address || ""} onChange={(e) => updateField("address", e.target.value)} placeholder="Rua, número, complemento" /></div>
-            </div>
-            {editingId && (
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label className="text-sm font-medium">Cliente Ativo</Label>
-                  <p className="text-xs text-muted-foreground">Desative para ocultar dos filtros padrão</p>
-                </div>
-                <Switch
-                  checked={form.status === "active"}
-                  onCheckedChange={(v) => setForm({ ...form, status: v ? "active" : "inactive" })}
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={createClient.isPending || updateClient.isPending}>
-              {editingId ? "Atualizar" : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClientFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        isEditing={!!editingId}
+        isSaving={createClient.isPending || updateClient.isPending}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
