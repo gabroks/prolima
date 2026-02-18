@@ -6,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Shield, Eye, EyeOff, Loader2, CheckCircle2, Users, FileText, BarChart3, Lock } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Shield, Eye, EyeOff, Loader2, CheckCircle2, Users, FileText, BarChart3, Lock, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -170,6 +169,7 @@ export default function Login() {
                     placeholder="seu@email.com"
                     className="h-11"
                     autoComplete="email"
+                    autoFocus
                     aria-required="true"
                   />
                 </div>
@@ -210,11 +210,11 @@ export default function Login() {
                     <PasswordStrengthIndicator strength={passwordStrength} />
                   )}
                 </div>
-                <Button type="submit" className="w-full h-11 text-sm font-semibold shadow-md shadow-primary/20" disabled={loading}>
+                <Button type="submit" className="w-full h-11 text-sm font-semibold shadow-md shadow-primary/20 group" disabled={loading}>
                   {loading ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSignUp ? "Criando…" : "Entrando…"}</>
                   ) : (
-                    isSignUp ? "Criar conta" : "Entrar"
+                    <>{isSignUp ? "Criar conta" : "Entrar"}<ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-0.5 transition-transform" /></>
                   )}
                 </Button>
               </form>
