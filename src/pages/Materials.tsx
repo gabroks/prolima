@@ -2,22 +2,17 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, MaterialForm, DbMaterial } from "@/hooks/useMaterials";
 import { QuotaButton } from "@/components/QuotaButton";
+import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
 import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, Tag, DollarSign, Layers } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
-
-const CHARGE_UNITS = ["m²", "metro", "unidade", "kg", "litro", "peça"];
-const MEASURE_UNITS = ["centímetro", "metro", "milímetro", "unidade"];
 
 type SortKey = "name" | "price-asc" | "price-desc" | "category";
 const PAGE_SIZE = 15;
@@ -214,7 +209,7 @@ export default function Materials() {
                   <TableCell className="hidden md:table-cell text-sm">{m.measure_unit}</TableCell>
                   <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(m.base_price)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(m)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -244,60 +239,16 @@ export default function Materials() {
         )}
       </div>
 
-      {/* Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Material" : "Novo Material"}</DialogTitle>
-            <DialogDescription>Preencha os dados do material.</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <Label>Nome do Material *</Label>
-              <Input value={form.name || ""} onChange={(e) => updateField("name", e.target.value)} placeholder="ex: Vidro Temperado 8mm" />
-            </div>
-            <div>
-              <Label>Categoria</Label>
-              <Input value={form.category || ""} onChange={(e) => updateField("category", e.target.value)} placeholder="ex: Vidros" list="categories-list" />
-              <datalist id="categories-list">
-                {categories.map(c => <option key={c} value={c} />)}
-              </datalist>
-            </div>
-            <div>
-              <Label>Preço Base (R$) *</Label>
-              <Input type="number" step="0.01" min="0" value={form.basePrice || ""} onChange={(e) => updateField("basePrice", parseFloat(e.target.value) || 0)} placeholder="0,00" />
-            </div>
-            <div>
-              <Label>Unidade de Cobrança</Label>
-              <Select value={form.chargeUnit || "m²"} onValueChange={(v) => updateField("chargeUnit", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CHARGE_UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Unidade de Medida</Label>
-              <Select value={form.measureUnit || "centímetro"} onValueChange={(v) => updateField("measureUnit", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MEASURE_UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Observações</Label>
-              <Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Informações adicionais sobre o material…" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={createMaterial.isPending || updateMaterial.isPending}>
-              {editingId ? "Atualizar" : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MaterialFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        isEditing={!!editingId}
+        isPending={createMaterial.isPending || updateMaterial.isPending}
+        categories={categories}
+      />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
