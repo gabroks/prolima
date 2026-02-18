@@ -3,9 +3,15 @@ import { AppSidebar } from "./AppSidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Bell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Shield, User } from "lucide-react";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
+import { useIsAdmin } from "@/hooks/useAdmin";
+import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CommandPalette } from "@/components/CommandPalette";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/formatters";
 
 const routeNames: Record<string, string> = {
   "/": "Dashboard",
@@ -55,6 +61,9 @@ export function AppLayout() {
   const pageName = getPageName(location.pathname);
   const parent = getParentRoute(location.pathname);
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
+  const { data: isAdmin } = useIsAdmin();
+  const { data: profile } = useCurrentProfile();
+  const displayName = profile?.name || profile?.email?.split("@")[0] || "";
 
   return (
     <SidebarProvider>
@@ -95,8 +104,18 @@ export function AppLayout() {
             {/* Spacer */}
             <div className="flex-1" />
 
+            {/* Command Palette trigger */}
+            <CommandPalette />
+
             {/* Header actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {isAdmin && (
+                <Badge variant="outline" className="hidden md:inline-flex text-[10px] h-5 px-1.5 gap-1 border-primary/30 text-primary">
+                  <Shield className="h-3 w-3" />
+                  Admin
+                </Badge>
+              )}
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -110,6 +129,24 @@ export function AppLayout() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">Notificações</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => navigate("/perfil")}
+                  >
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                        {displayName ? getInitials(displayName) : <User className="h-3.5 w-3.5" />}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Perfil</TooltipContent>
               </Tooltip>
             </div>
           </header>
