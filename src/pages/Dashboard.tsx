@@ -82,10 +82,13 @@ export default function Dashboard() {
   const saldoDiff = monthSaldo - prevMonthSaldo;
   const saldoTrendLabel = saldoDiff > 0 ? `+${formatCurrency(saldoDiff)}` : saldoDiff < 0 ? formatCurrency(saldoDiff) : "Estável";
 
+  const activeClients = clients.filter((c) => c.status === "active").length;
+  const activeSuppliers = suppliers.filter((s) => s.active).length;
+
   const summaryCards = [
-    { title: "Clientes", value: clients.length, subtitle: `${clients.filter((c) => c.status === "active").length} ativos`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
-    { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovados`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
-    { title: "Materiais", value: materials.length, subtitle: `${materials.length} cadastrados`, icon: Package, trend: null, trendUp: true, href: "/materiais" },
+    { title: "Clientes", value: clients.length, subtitle: `${activeClients} ativo${activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
+    { title: "Orçamentos", value: budgets.length, subtitle: `${approvedBudgets.length} aprovado${approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: budgetDiff !== 0 ? `${budgetDiff > 0 ? "+" : ""}${budgetDiff} este mês` : null, trendUp: budgetDiff >= 0, href: "/orcamentos" },
+    { title: "Fornecedores", value: suppliers.length, subtitle: `${activeSuppliers} ativo${activeSuppliers !== 1 ? "s" : ""}`, icon: Package, trend: null, trendUp: true, href: "/fornecedores" },
     { title: "Saldo do Mês", value: formatCurrency(monthSaldo), subtitle: monthSaldo >= 0 ? "Positivo" : "Negativo", icon: monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: saldoTrendLabel, trendUp: saldoDiff >= 0, href: "/financeiro" },
   ];
 

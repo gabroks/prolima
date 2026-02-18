@@ -82,9 +82,17 @@ export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, 
             <span className="text-muted-foreground">Orçamentos aprovados</span>
             <span className="font-semibold tabular-nums">{formatCurrency(totalApproved)}</span>
           </div>
-          <div className="flex justify-between text-xs">
+          <div className="flex justify-between text-xs items-center">
             <span className="text-muted-foreground">Margem estimada</span>
-            <span className="font-semibold tabular-nums text-primary">{margem > 0 ? `${margem}%` : "—"}</span>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${margem >= 0 ? "bg-primary" : "bg-destructive"}`}
+                  style={{ width: `${Math.min(Math.abs(margem), 100)}%` }}
+                />
+              </div>
+              <span className={`font-semibold tabular-nums ${margem >= 0 ? "text-primary" : "text-destructive"}`}>{margem !== 0 ? `${margem}%` : "—"}</span>
+            </div>
           </div>
         </div>
         <Button variant="outline" size="sm" className="w-full text-xs mt-2" onClick={() => navigate("/financeiro")}>
