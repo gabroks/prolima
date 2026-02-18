@@ -34,6 +34,7 @@ export default function Financial() {
   const deletePaymentMut = useDeletePayment();
 
   const approvedBudgets = budgets.filter(b => b.status === "approved");
+  const allBudgets = budgets;
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("all");
@@ -120,8 +121,8 @@ export default function Financial() {
 
   const filteredBudgets = useMemo(() => {
     const q = search.toLowerCase();
-    return approvedBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q));
-  }, [search, approvedBudgets]);
+    return allBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q));
+  }, [search, allBudgets]);
 
   const paymentToDelete = useMemo(() => {
     if (!deleteId) return null;
@@ -233,7 +234,7 @@ export default function Financial() {
       <Tabs defaultValue="payments" className="space-y-4">
         <TabsList>
           <TabsTrigger value="payments">Pagamentos ({payments.length})</TabsTrigger>
-          <TabsTrigger value="budgets">Orçamentos Aprovados ({approvedBudgets.length})</TabsTrigger>
+          <TabsTrigger value="budgets">Orçamentos ({allBudgets.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payments">
@@ -311,6 +312,7 @@ export default function Financial() {
                   <TableRow>
                     <TableHead>Número</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead className="hidden sm:table-cell">Situação</TableHead>
                     <TableHead>Valor Total</TableHead>
                     <TableHead className="hidden sm:table-cell">Recebido</TableHead>
                     <TableHead className="hidden sm:table-cell">Progresso</TableHead>
@@ -320,8 +322,8 @@ export default function Financial() {
                 <TableBody>
                   {filteredBudgets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                        Nenhum orçamento aprovado
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                        Nenhum orçamento encontrado
                       </TableCell>
                     </TableRow>
                   ) : filteredBudgets.map(b => {
@@ -332,6 +334,11 @@ export default function Financial() {
                       <TableRow key={b.id}>
                         <TableCell className="font-medium font-mono text-xs">{b.number}</TableCell>
                         <TableCell>{b.client_name}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant={b.status === "approved" ? "default" : b.status === "draft" ? "secondary" : b.status === "issued" ? "outline" : "destructive"} className="text-xs">
+                            {b.status === "approved" ? "Aprovado" : b.status === "draft" ? "Rascunho" : b.status === "issued" ? "Emitido" : "Rejeitado"}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="tabular-nums font-medium">{formatCurrency(Number(b.total))}</TableCell>
                         <TableCell className="hidden sm:table-cell tabular-nums text-primary">{formatCurrency(received)}</TableCell>
                         <TableCell className="hidden sm:table-cell">
