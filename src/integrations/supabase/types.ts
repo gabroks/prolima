@@ -453,33 +453,48 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          company_name: string | null
+          company_phone: string | null
           created_at: string
           email: string
           id: string
           name: string
           phone: string
+          plan_type: string
           updated_at: string
           user_id: string
+          username: string | null
+          valid_until: string | null
         }
         Insert: {
           active?: boolean
+          company_name?: string | null
+          company_phone?: string | null
           created_at?: string
           email?: string
           id?: string
           name?: string
           phone?: string
+          plan_type?: string
           updated_at?: string
           user_id: string
+          username?: string | null
+          valid_until?: string | null
         }
         Update: {
           active?: boolean
+          company_name?: string | null
+          company_phone?: string | null
           created_at?: string
           email?: string
           id?: string
           name?: string
           phone?: string
+          plan_type?: string
           updated_at?: string
           user_id?: string
+          username?: string | null
+          valid_until?: string | null
         }
         Relationships: []
       }

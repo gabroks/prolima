@@ -5,15 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useProfiles, useToggleProfileStatus } from "@/hooks/useProfiles";
 import { useSystemLimits, useUpdateSystemLimits, useUsageCounts } from "@/hooks/useSystemLimits";
-import { Users, FileText, Package, Truck, Search, Save, UserCheck, UserX } from "lucide-react";
-import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { Users, FileText, Package, Truck, Search, Save, UserCheck, UserX, Send, CalendarPlus, X, Trash2, UserCircle } from "lucide-react";
+import { format, differenceInDays, addDays, isPast, isToday } from "date-fns";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function AdminClientsList() {
   const { data: profiles, isLoading: loadingProfiles } = useProfiles();
@@ -21,15 +28,19 @@ export function AdminClientsList() {
   const { data: limits, isLoading: loadingLimits } = useSystemLimits();
   const { data: usage, isLoading: loadingUsage } = useUsageCounts();
   const updateLimits = useUpdateSystemLimits();
+  const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [editLimits, setEditLimits] = useState<Record<string, number> | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const isLoading = loadingProfiles || loadingLimits || loadingUsage;
 
   const filteredProfiles = profiles?.filter(p =>
     p.email.toLowerCase().includes(search.toLowerCase()) ||
-    p.name.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p as any).company_name?.toLowerCase().includes(search.toLowerCase()) ||
+    (p as any).username?.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
 
   const currentLimits = editLimits || (limits ? {
@@ -43,6 +54,72 @@ export function AdminClientsList() {
     if (!limits || !currentLimits) return;
     updateLimits.mutate({ id: limits.id, data: currentLimits });
     setEditLimits(null);
+  };
+
+  const handleExtendValidity = async (profileId: string, days: number) => {
+    const profile = profiles?.find(p => p.id === profileId) as any;
+    if (!profile) return;
+
+    const currentDate = profile.valid_until ? new Date(profile.valid_until) : new Date();
+    const baseDate = isPast(currentDate) ? new Date() : currentDate;
+    const newDate = addDays(baseDate, days);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ valid_until: format(newDate, "yyyy-MM-dd") } as any)
+      .eq("id", profileId);
+
+    if (error) {
+      toast.error("Erro ao estender validade");
+    } else {
+      toast.success(`Validade estendida em ${days} dias`);
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!deleteId) return;
+    // Deactivate instead of hard delete for safety
+    const { error } = await supabase
+      .from("profiles")
+      .update({ active: false })
+      .eq("id", deleteId);
+
+    if (error) {
+      toast.error("Erro ao remover usuário");
+    } else {
+      toast.success("Usuário desativado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    }
+    setDeleteId(null);
+  };
+
+  const handleSendNotification = async (userId: string, userName: string) => {
+    const { error } = await supabase.from("notifications").insert({
+      user_id: userId,
+      message: `Olá ${userName}, sua conta está sendo monitorada pelo administrador.`,
+    });
+
+    if (error) {
+      toast.error("Erro ao enviar notificação");
+    } else {
+      toast.success(`Notificação enviada para ${userName}`);
+    }
+  };
+
+  const getValidityInfo = (validUntil: string | null) => {
+    if (!validUntil) return { label: "Sem validade", daysLeft: 0, expired: true };
+    const date = new Date(validUntil);
+    const days = differenceInDays(date, new Date());
+
+    if (isPast(date) && !isToday(date)) {
+      return { label: "Expirado", daysLeft: days, expired: true };
+    }
+    return {
+      label: `${days} dia${days !== 1 ? "s" : ""} restante${days !== 1 ? "s" : ""}`,
+      daysLeft: days,
+      expired: false,
+    };
   };
 
   const quotas = [
@@ -110,10 +187,10 @@ export function AdminClientsList() {
       {/* User profiles list */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <CardTitle className="text-base">Usuários do Sistema</CardTitle>
-              <CardDescription>Usuários que fizeram login com e-mail e senha.</CardDescription>
+              <CardDescription>Gerencie usuários, planos e validades.</CardDescription>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-xs">
@@ -131,21 +208,21 @@ export function AdminClientsList() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou e-mail..."
+              placeholder="Buscar por nome, e-mail, empresa ou usuário..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9"
             />
           </div>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Usuário</TableHead>
-                  <TableHead className="hidden sm:table-cell">E-mail</TableHead>
-                  <TableHead className="hidden sm:table-cell">Cadastro</TableHead>
+                  <TableHead className="hidden md:table-cell">Empresa</TableHead>
+                  <TableHead className="hidden sm:table-cell">Validade</TableHead>
                   <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Ação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,34 +233,175 @@ export function AdminClientsList() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProfiles.map(profile => (
-                    <TableRow key={profile.id}>
-                      <TableCell className="font-medium text-sm">
-                        {profile.name || <span className="text-muted-foreground italic">Sem nome</span>}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{profile.email}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
-                        {format(new Date(profile.created_at), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={profile.active ? "default" : "secondary"} className="text-[10px]">
-                          {profile.active ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Switch
-                          checked={profile.active}
-                          onCheckedChange={() => toggleStatus.mutate({ id: profile.id, currentActive: profile.active })}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredProfiles.map(profile => {
+                    const p = profile as any;
+                    const validity = getValidityInfo(p.valid_until);
+
+                    return (
+                      <TableRow key={profile.id}>
+                        {/* USUÁRIO */}
+                        <TableCell>
+                          <div className="flex items-start gap-2.5">
+                            <UserCircle className="h-8 w-8 text-muted-foreground/40 shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold leading-tight truncate">
+                                {profile.name || <span className="text-muted-foreground italic">Sem nome</span>}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
+                              {p.username && (
+                                <p className="text-xs text-muted-foreground/60 truncate">@{p.username}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* EMPRESA */}
+                        <TableCell className="hidden md:table-cell">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{p.company_name || "—"}</p>
+                            <p className="text-xs text-muted-foreground truncate">{p.company_phone || "—"}</p>
+                          </div>
+                        </TableCell>
+
+                        {/* VALIDADE */}
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <CalendarPlus className="h-3 w-3 shrink-0" />
+                              {p.valid_until ? format(new Date(p.valid_until), "dd/MM/yyyy") : "—"}
+                            </p>
+                            <p className={`text-xs font-medium mt-0.5 ${
+                              validity.expired 
+                                ? "text-destructive" 
+                                : validity.daysLeft <= 7 
+                                  ? "text-yellow-600 dark:text-yellow-400" 
+                                  : "text-primary"
+                            }`}>
+                              {validity.label}
+                            </p>
+                          </div>
+                        </TableCell>
+
+                        {/* STATUS */}
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <Badge 
+                              variant={profile.active ? "default" : "secondary"} 
+                              className={`text-[10px] ${profile.active ? "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30" : ""}`}
+                            >
+                              {profile.active ? "Ativo" : "Inativo"}
+                            </Badge>
+                            {p.plan_type === "trial" && (
+                              <Badge variant="outline" className="text-[10px] border-yellow-500/40 text-yellow-600 dark:text-yellow-400">
+                                Trial
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* AÇÕES */}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-0.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                  onClick={() => handleSendNotification(profile.user_id, profile.name)}
+                                >
+                                  <Send className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">Enviar notificação</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-1.5 text-xs text-primary hover:bg-primary/10"
+                                  onClick={() => handleExtendValidity(profile.id, 7)}
+                                >
+                                  +7d
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">Estender 7 dias</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-1.5 text-xs text-primary hover:bg-primary/10"
+                                  onClick={() => handleExtendValidity(profile.id, 30)}
+                                >
+                                  +30d
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">Estender 30 dias</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-500/10"
+                                  onClick={() => toggleStatus.mutate({ id: profile.id, currentActive: profile.active })}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">
+                                {profile.active ? "Desativar" : "Ativar"}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => setDeleteId(profile.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">Remover</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desativar usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O usuário será desativado e não poderá mais acessar o sistema. Esta ação pode ser revertida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Desativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
