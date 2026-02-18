@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { CalendarClock, DollarSign, Receipt, FileText } from "lucide-react";
 import { formatCurrency, formatRelativeDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { useNavigate } from "react-router-dom";
@@ -19,12 +20,14 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
     const items = [
       ...payments.map((p) => ({
         id: `pay-${p.id}`,
-        title: `Pagamento recebido — ${p.client_name}`,
+        title: `Pagamento — ${p.client_name}`,
         subtitle: formatCurrency(Number(p.amount)),
         date: p.date,
         icon: DollarSign,
         iconBg: "bg-primary/10 text-primary",
         href: "/financeiro",
+        badge: p.method,
+        badgeVariant: "secondary" as const,
       })),
       ...expenses.map((e) => ({
         id: `exp-${e.id}`,
@@ -34,6 +37,8 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         icon: Receipt,
         iconBg: "bg-destructive/10 text-destructive",
         href: "/despesas",
+        badge: e.category,
+        badgeVariant: "outline" as const,
       })),
       ...budgets.map((b) => ({
         id: `bud-${b.id}`,
@@ -43,6 +48,8 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         icon: FileText,
         iconBg: "bg-muted text-muted-foreground",
         href: `/editar-orcamento/${b.id}`,
+        badge: null as string | null,
+        badgeVariant: "secondary" as const,
       })),
     ]
       .sort((a, b) => b.date.localeCompare(a.date))
@@ -71,8 +78,11 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm leading-snug truncate">{item.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-xs font-medium text-muted-foreground">{item.subtitle}</span>
+                      {item.badge && (
+                        <Badge variant={item.badgeVariant} className="text-[9px] h-4 px-1">{item.badge}</Badge>
+                      )}
                       <span className="text-[10px] text-muted-foreground tabular-nums">• {formatRelativeDate(item.date)}</span>
                     </div>
                   </div>

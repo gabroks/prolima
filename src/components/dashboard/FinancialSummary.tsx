@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, ChevronRight } from "lucide-react";
+import { TrendingUp, ChevronRight, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, getInitials } from "@/lib/formatters";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface FinancialSummaryProps {
   totalReceitas: number;
@@ -11,13 +12,22 @@ interface FinancialSummaryProps {
   totalApproved: number;
   monthReceitas?: number;
   monthDespesas?: number;
+  prevMonthReceitas?: number;
+  prevMonthDespesas?: number;
+  topClients?: [string, number][];
 }
 
-export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, monthReceitas, monthDespesas }: FinancialSummaryProps) {
+export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, monthReceitas, monthDespesas, prevMonthReceitas, prevMonthDespesas, topClients }: FinancialSummaryProps) {
   const navigate = useNavigate();
   const saldo = totalReceitas - totalDespesas;
   const margem = totalReceitas > 0 ? Math.round(((totalReceitas - totalDespesas) / totalReceitas) * 100) : 0;
   const monthSaldo = (monthReceitas ?? 0) - (monthDespesas ?? 0);
+
+  const prevSaldo = (prevMonthReceitas ?? 0) - (prevMonthDespesas ?? 0);
+  const saldoDiff = monthSaldo - prevSaldo;
+  const receitaDiff = prevMonthReceitas && prevMonthReceitas > 0
+    ? (((monthReceitas ?? 0) - prevMonthReceitas) / prevMonthReceitas) * 100
+    : null;
 
   return (
     <Card className="lg:col-span-1 animate-slide-up" style={{ animationDelay: "400ms", animationFillMode: "backwards" }}>
@@ -35,7 +45,15 @@ export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, 
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Este mês</p>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Receitas</span>
-                <span className="text-sm font-semibold text-primary tabular-nums">{formatCurrency(monthReceitas)}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-semibold text-primary tabular-nums">{formatCurrency(monthReceitas)}</span>
+                  {receitaDiff !== null && (
+                    <span className={`text-[10px] flex items-center ${receitaDiff >= 0 ? "text-primary" : "text-destructive"}`}>
+                      {receitaDiff >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {Math.abs(receitaDiff).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Despesas</span>
@@ -43,9 +61,16 @@ export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, 
               </div>
               <div className="flex items-center justify-between pt-1 border-t">
                 <span className="text-sm font-medium">Saldo mensal</span>
-                <span className={`text-sm font-bold tabular-nums ${monthSaldo >= 0 ? "text-primary" : "text-destructive"}`}>
-                  {formatCurrency(monthSaldo)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-sm font-bold tabular-nums ${monthSaldo >= 0 ? "text-primary" : "text-destructive"}`}>
+                    {formatCurrency(monthSaldo)}
+                  </span>
+                  {saldoDiff !== 0 && prevSaldo !== 0 && (
+                    <span className={`text-[10px] flex items-center ${saldoDiff >= 0 ? "text-primary" : "text-destructive"}`}>
+                      {saldoDiff >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <Separator />
@@ -77,6 +102,7 @@ export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, 
             </span>
           </div>
         </div>
+
         <div className="pt-3 border-t space-y-2.5">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Orçamentos aprovados</span>
@@ -95,6 +121,25 @@ export function FinancialSummary({ totalReceitas, totalDespesas, totalApproved, 
             </div>
           </div>
         </div>
+
+        {/* Top clients */}
+        {topClients && topClients.length > 0 && (
+          <div className="pt-3 border-t space-y-2">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Top Clientes</p>
+            {topClients.map(([name, total]) => (
+              <div key={name} className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="bg-primary/10 text-primary text-[9px] font-semibold">
+                    {getInitials(name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs truncate flex-1">{name}</span>
+                <span className="text-xs font-semibold tabular-nums text-primary">{formatCurrency(total)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Button variant="outline" size="sm" className="w-full text-xs mt-2" onClick={() => navigate("/financeiro")}>
           Ver relatório completo <ChevronRight className="h-3.5 w-3.5 ml-1" />
         </Button>
