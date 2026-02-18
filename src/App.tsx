@@ -57,30 +57,28 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/clientes" element={<Clients />} />
-                  <Route path="/clientes/:id" element={<ClientDetail />} />
-                  <Route path="/fornecedores" element={<Suppliers />} />
-                  <Route path="/materiais" element={<Materials />} />
-                  <Route path="/novo-orcamento" element={<NewBudget />} />
-                  <Route path="/editar-orcamento/:id" element={<NewBudget />} />
-                  <Route path="/orcamentos" element={<Budgets />} />
-                  <Route path="/financeiro" element={<Financial />} />
-                  <Route path="/despesas" element={<Expenses />} />
-                  <Route path="/relatorios" element={<Reports />} />
-                  <Route path="/configuracoes" element={<SettingsPage />} />
-                  <Route path="/backup" element={<Backup />} />
-                  <Route path="/perfil" element={<Profile />} />
-                  <Route path="/notificacoes" element={<Notifications />} />
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
+            <Routes>
+              <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+              <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/clientes" element={<Clients />} />
+                <Route path="/clientes/:id" element={<ClientDetail />} />
+                <Route path="/fornecedores" element={<Suppliers />} />
+                <Route path="/materiais" element={<Materials />} />
+                <Route path="/novo-orcamento" element={<NewBudget />} />
+                <Route path="/editar-orcamento/:id" element={<NewBudget />} />
+                <Route path="/orcamentos" element={<Budgets />} />
+                <Route path="/financeiro" element={<Financial />} />
+                <Route path="/despesas" element={<Expenses />} />
+                <Route path="/relatorios" element={<Reports />} />
+                <Route path="/configuracoes" element={<SettingsPage />} />
+                <Route path="/backup" element={<Backup />} />
+                <Route path="/perfil" element={<Profile />} />
+                <Route path="/notificacoes" element={<Notifications />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
