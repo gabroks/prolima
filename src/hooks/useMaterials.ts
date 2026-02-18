@@ -43,6 +43,14 @@ export function useCreateMaterial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (form: MaterialForm) => {
+      const [{ count }, { data: limits }] = await Promise.all([
+        supabase.from("materials").select("id", { count: "exact", head: true }),
+        supabase.from("system_limits").select("max_materials").limit(1).single(),
+      ]);
+      if (limits && count !== null && count >= limits.max_materials) {
+        throw new Error(`Limite de materiais atingido (${count}/${limits.max_materials}). Contate o administrador.`);
+      }
+
       const { data, error } = await supabase
         .from("materials")
         .insert(toInsert(form))
@@ -53,9 +61,10 @@ export function useCreateMaterial() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["materials"] });
+      qc.invalidateQueries({ queryKey: ["usage_counts"] });
       toast.success("Material cadastrado!");
     },
-    onError: () => toast.error("Erro ao cadastrar material"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao cadastrar material"),
   });
 }
 

@@ -48,12 +48,24 @@ export function useCreateSupplier() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (form: SupplierForm) => {
+      const [{ count }, { data: limits }] = await Promise.all([
+        supabase.from("suppliers").select("id", { count: "exact", head: true }),
+        supabase.from("system_limits").select("max_suppliers").limit(1).single(),
+      ]);
+      if (limits && count !== null && count >= limits.max_suppliers) {
+        throw new Error(`Limite de fornecedores atingido (${count}/${limits.max_suppliers}). Contate o administrador.`);
+      }
+
       const { data, error } = await supabase.from("suppliers").insert(toInsert(form)).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor cadastrado!"); },
-    onError: () => toast.error("Erro ao cadastrar fornecedor"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["suppliers"] });
+      qc.invalidateQueries({ queryKey: ["usage_counts"] });
+      toast.success("Fornecedor cadastrado!");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao cadastrar fornecedor"),
   });
 }
 

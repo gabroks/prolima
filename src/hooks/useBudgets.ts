@@ -68,6 +68,15 @@ export function useCreateBudget() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ budgetNumber, form }: { budgetNumber: string; form: BudgetFormData }) => {
+      // Quota enforcement
+      const [{ count }, { data: limits }] = await Promise.all([
+        supabase.from("budgets").select("id", { count: "exact", head: true }),
+        supabase.from("system_limits").select("max_budgets").limit(1).single(),
+      ]);
+      if (limits && count !== null && count >= limits.max_budgets) {
+        throw new Error(`Limite de orçamentos atingido (${count}/${limits.max_budgets}). Contate o administrador.`);
+      }
+
       const { data: budget, error: budgetError } = await supabase
         .from("budgets")
         .insert({
@@ -112,9 +121,10 @@ export function useCreateBudget() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: ["usage_counts"] });
       toast.success("Orçamento salvo!");
     },
-    onError: () => toast.error("Erro ao salvar orçamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao salvar orçamento"),
   });
 }
 

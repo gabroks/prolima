@@ -55,6 +55,15 @@ export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (form: ClientForm) => {
+      // Quota enforcement
+      const [{ count }, { data: limits }] = await Promise.all([
+        supabase.from("clients").select("id", { count: "exact", head: true }),
+        supabase.from("system_limits").select("max_clients").limit(1).single(),
+      ]);
+      if (limits && count !== null && count >= limits.max_clients) {
+        throw new Error(`Limite de clientes atingido (${count}/${limits.max_clients}). Contate o administrador.`);
+      }
+
       const { data, error } = await supabase
         .from("clients")
         .insert(toInsert(form))
@@ -65,9 +74,10 @@ export function useCreateClient() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["usage_counts"] });
       toast.success("Cliente cadastrado!");
     },
-    onError: () => toast.error("Erro ao cadastrar cliente"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao cadastrar cliente"),
   });
 }
 
