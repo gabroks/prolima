@@ -69,8 +69,8 @@ export function AppLayout() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <main className="flex-1 flex flex-col min-w-0" role="main">
+          <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 sm:px-4 md:px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-10" role="banner">
             <SidebarTrigger />
 
             {/* Breadcrumb */}
@@ -155,7 +155,7 @@ export function AppLayout() {
             </div>
           </header>
 
-          <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto bg-muted/30">
+          <div className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-auto bg-muted/30">
             <div className="animate-fade-in">
               <Outlet />
             </div>
