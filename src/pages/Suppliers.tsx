@@ -12,11 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, useToggleSupplierActive, type SupplierForm, type DbSupplier } from "@/hooks/useSuppliers";
 import { QuotaButton } from "@/components/QuotaButton";
 import { useExpenses } from "@/hooks/useExpenses";
-import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign } from "lucide-react";
-import { formatCurrency } from "@/lib/formatters";
+import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, XCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign, MessageCircle, Receipt, Building2 } from "lucide-react";
+import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 
 type SortKey = "name" | "city" | "status";
@@ -34,6 +35,7 @@ export default function Suppliers() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,9 +46,10 @@ export default function Suppliers() {
   const filtered = useMemo(() => {
     let result = suppliers.filter((s) => {
       const q = search.toLowerCase();
-      const matchSearch = s.name.toLowerCase().includes(q) || (s.document?.includes(q)) || (s.phone?.includes(q)) || (s.city?.toLowerCase().includes(q));
+      const matchSearch = !q || s.name.toLowerCase().includes(q) || (s.document?.includes(q)) || (s.phone?.includes(q)) || (s.city?.toLowerCase().includes(q)) || (s.email?.toLowerCase().includes(q));
       const matchStatus = statusFilter === "all" || (statusFilter === "active" ? s.active : !s.active);
-      return matchSearch && matchStatus;
+      const matchType = typeFilter === "all" || s.person_type === typeFilter;
+      return matchSearch && matchStatus && matchType;
     });
 
     switch (sortBy) {
@@ -55,7 +58,7 @@ export default function Suppliers() {
       case "status": result.sort((a, b) => Number(b.active) - Number(a.active)); break;
     }
     return result;
-  }, [suppliers, search, statusFilter, sortBy]);
+  }, [suppliers, search, statusFilter, typeFilter, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
@@ -63,12 +66,23 @@ export default function Suppliers() {
 
   const activeCount = suppliers.filter(s => s.active).length;
 
-  const supplierExpenses = useMemo(() => {
-    const map: Record<string, number> = {};
-    expenses.forEach(e => { if (e.supplier_id) map[e.supplier_id] = (map[e.supplier_id] || 0) + Number(e.amount); });
+  const supplierExpenseStats = useMemo(() => {
+    const map = new Map<string, { total: number; count: number }>();
+    expenses.forEach(e => {
+      if (e.supplier_id) {
+        const prev = map.get(e.supplier_id) || { total: 0, count: 0 };
+        prev.total += Number(e.amount);
+        prev.count++;
+        map.set(e.supplier_id, prev);
+      }
+    });
     return map;
   }, [expenses]);
-  const totalSupplierExpenses = Object.values(supplierExpenses).reduce((s, v) => s + v, 0);
+  const totalSupplierExpenses = Array.from(supplierExpenseStats.values()).reduce((s, v) => s + v.total, 0);
+  const totalExpenseCount = Array.from(supplierExpenseStats.values()).reduce((s, v) => s + v.count, 0);
+  const pjCount = suppliers.filter(s => s.person_type === "juridica").length;
+
+  const formatWhatsApp = (phone: string) => `https://wa.me/55${phone.replace(/\\D/g, "")}`;
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (s: DbSupplier) => {
@@ -129,9 +143,9 @@ export default function Suppliers() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: suppliers.length, icon: Truck, color: "text-primary" },
-          { label: "Ativos", value: activeCount, icon: CheckCircle, color: "text-primary" },
-          { label: "Inativos", value: suppliers.length - activeCount, icon: XCircle, color: "text-destructive" },
+          { label: "Total", value: String(suppliers.length), icon: Truck, color: "text-primary" },
+          { label: "Ativos", value: String(activeCount), icon: CheckCircle, color: "text-primary" },
+          { label: "Despesas", value: String(totalExpenseCount), icon: Receipt, color: "text-primary" },
           { label: "Total Gasto", value: formatCurrency(totalSupplierExpenses), icon: DollarSign, color: "text-primary" },
         ].map(s => (
           <Card key={s.label} className="p-4">
@@ -160,6 +174,14 @@ export default function Suppliers() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
             <SelectItem value="inactive">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); resetPage(); }}>
+          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos tipos</SelectItem>
+            <SelectItem value="fisica">Pessoa Física</SelectItem>
+            <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
@@ -205,15 +227,27 @@ export default function Suppliers() {
               ) : paged.map((s) => (
                 <TableRow key={s.id} className="group">
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{s.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{s.document || "—"}</p>
-                      <div className="flex flex-wrap gap-2 mt-1 md:hidden">
-                        {s.phone && (
-                          <a href={`tel:${s.phone}`} className="text-xs text-primary flex items-center gap-1 hover:underline" onClick={e => e.stopPropagation()}>
-                            <Phone className="h-3 w-3" />{s.phone}
-                          </a>
-                        )}
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {getInitials(s.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{s.name}</p>
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">
+                            {s.person_type === "fisica" ? "PF" : "PJ"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono">{s.document || "—"}</p>
+                        <div className="flex flex-wrap gap-2 mt-1 md:hidden">
+                          {s.phone && (
+                            <a href={`tel:${s.phone}`} className="text-xs text-primary flex items-center gap-1 hover:underline" onClick={e => e.stopPropagation()}>
+                              <Phone className="h-3 w-3" />{s.phone}
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -240,9 +274,16 @@ export default function Suppliers() {
                     ) : "—"}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <span className="text-sm font-semibold tabular-nums text-primary">
-                      {supplierExpenses[s.id] ? formatCurrency(supplierExpenses[s.id]) : "—"}
-                    </span>
+                    {(() => {
+                      const stats = supplierExpenseStats.get(s.id);
+                      if (!stats) return <span className="text-muted-foreground text-xs">—</span>;
+                      return (
+                        <div>
+                          <span className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(stats.total)}</span>
+                          <p className="text-[10px] text-muted-foreground">{stats.count} despesa{stats.count !== 1 ? "s" : ""}</p>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -255,6 +296,18 @@ export default function Suppliers() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      {s.phone && (
+                        <a
+                          href={formatWhatsApp(s.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
+                          onClick={e => e.stopPropagation()}
+                          title="WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                        </a>
+                      )}
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(s)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -353,7 +406,15 @@ export default function Suppliers() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir fornecedor?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita. O fornecedor será removido permanentemente.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {(() => {
+                const stats = deleteId ? supplierExpenseStats.get(deleteId) : null;
+                if (stats && stats.count > 0) {
+                  return `⚠️ Este fornecedor possui ${stats.count} despesa${stats.count !== 1 ? "s" : ""} vinculada${stats.count !== 1 ? "s" : ""} (${formatCurrency(stats.total)}). A exclusão é permanente e não pode ser desfeita.`;
+                }
+                return "Esta ação não pode ser desfeita. O fornecedor será removido permanentemente.";
+              })()}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
