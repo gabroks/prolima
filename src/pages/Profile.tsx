@@ -7,7 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Save, Lock, Eye, EyeOff, Shield, Mail, User, Phone, Loader2, Clock, Calendar, KeyRound, Building2, AtSign, CreditCard } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Save, Lock, Eye, EyeOff, Shield, Mail, User, Phone, Loader2, Clock, Calendar, KeyRound, Building2, AtSign, CreditCard, LogOut, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/formatters";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +24,7 @@ import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicato
 import { differenceInDays, isPast, isToday, format } from "date-fns";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile, isLoading: loadingProfile } = useCurrentProfile();
   const { data: isAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
@@ -356,6 +360,75 @@ export default function Profile() {
                 </div>
               </>
             )}
+            <Separator />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={async () => {
+                await signOut();
+                toast.success("Sessão encerrada com sucesso");
+              }}
+            >
+              <LogOut className="h-3.5 w-3.5 mr-1.5" />
+              Encerrar sessão atual
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone */}
+        <Card className="md:col-span-2 border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" />Zona de Perigo
+            </CardTitle>
+            <CardDescription>Ações irreversíveis que afetam sua conta.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Desativar minha conta</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Sua conta será desativada e você não poderá mais acessar o sistema.</p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="shrink-0">
+                    Desativar conta
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Desativar sua conta?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Sua conta será desativada imediatamente. Você não poderá mais fazer login.
+                      Para reativar, entre em contato com o administrador do sistema.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={async () => {
+                        if (!profile) return;
+                        try {
+                          const { error } = await supabase
+                            .from("profiles")
+                            .update({ active: false } as any)
+                            .eq("id", profile.id);
+                          if (error) throw error;
+                          toast.success("Conta desativada. Você será desconectado.");
+                          setTimeout(() => signOut(), 1500);
+                        } catch {
+                          toast.error("Erro ao desativar conta");
+                        }
+                      }}
+                    >
+                      Sim, desativar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </CardContent>
         </Card>
       </div>
