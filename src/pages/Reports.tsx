@@ -349,10 +349,10 @@ export default function Reports() {
                 <BarChart data={monthlyData} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                   <Tooltip
                     formatter={(v: number, name: string) => [formatCurrency(v), name === "receitas" ? "Receitas" : "Despesas"]}
-                    contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }}
+                    contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
                   />
                   <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={40} />
                   <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} maxBarSize={40} opacity={0.8} />
@@ -374,10 +374,10 @@ export default function Reports() {
                 <LineChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                   <Tooltip
                     formatter={(v: number) => [formatCurrency(v), "Acumulado"]}
-                    contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }}
+                    contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
                   />
                   <Line
                     type="monotone"
@@ -455,7 +455,7 @@ export default function Reports() {
                     </Pie>
                     <Tooltip
                       formatter={(v: number) => [formatCurrency(v)]}
-                      contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }}
+                      contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -501,7 +501,7 @@ export default function Reports() {
                     </Pie>
                     <Tooltip
                       formatter={(v: number, name: string) => [v, name]}
-                      contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))" }}
+                      contentStyle={{ borderRadius: "var(--radius)", border: "1px solid hsl(var(--border))", fontSize: "12px", backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
