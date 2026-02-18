@@ -39,7 +39,7 @@ export default function Financial() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<PaymentForm>>({ method: "PIX" });
+  const [form, setForm] = useState<Partial<PaymentForm>>({ method: "PIX", date: new Date().toISOString().split("T")[0] });
 
   const totalApproved = approvedBudgets.reduce((s, b) => s + Number(b.total), 0);
   const totalReceived = payments.reduce((s, p) => s + Number(p.amount), 0);
@@ -86,7 +86,7 @@ export default function Financial() {
     return approvedBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q));
   }, [search, approvedBudgets]);
 
-  const openNew = () => { setEditingId(null); setForm({ method: "PIX" }); setDialogOpen(true); };
+  const openNew = () => { setEditingId(null); setForm({ method: "PIX", date: new Date().toISOString().split("T")[0] }); setDialogOpen(true); };
   const openEdit = (p: DbPayment) => { setEditingId(p.id); setForm({ budgetId: p.budget_id || "", budgetNumber: p.budget_number, clientName: p.client_name, amount: Number(p.amount), method: p.method, date: p.date, notes: p.notes || undefined }); setDialogOpen(true); };
 
   const handleSave = () => {
@@ -122,7 +122,7 @@ export default function Financial() {
         <TabsList><TabsTrigger value="payments">Pagamentos ({payments.length})</TabsTrigger><TabsTrigger value="budgets">Orçamentos Aprovados ({approvedBudgets.length})</TabsTrigger></TabsList>
         <TabsContent value="payments"><Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Orçamento</TableHead><TableHead className="hidden md:table-cell">Cliente</TableHead><TableHead>Valor</TableHead><TableHead className="hidden sm:table-cell">Método</TableHead><TableHead className="hidden md:table-cell">Data</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
           {filteredPayments.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground"><CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" /><p>Nenhum pagamento</p></TableCell></TableRow> : pagedPayments.map(p => (
-            <TableRow key={p.id} className="group"><TableCell><div><p className="font-medium font-mono text-xs">{p.budget_number}</p><p className="text-xs text-muted-foreground md:hidden">{p.client_name}</p></div></TableCell><TableCell className="hidden md:table-cell">{p.client_name}</TableCell><TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(Number(p.amount))}</TableCell><TableCell className="hidden sm:table-cell"><Badge variant={methodBadgeVariant(p.method)}>{p.method}</Badge></TableCell><TableCell className="hidden md:table-cell">{formatDate(p.date)}</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>
+            <TableRow key={p.id} className="group"><TableCell><div><p className="font-medium font-mono text-xs">{p.budget_number}</p><p className="text-xs text-muted-foreground md:hidden">{p.client_name}</p></div></TableCell><TableCell className="hidden md:table-cell">{p.client_name}</TableCell><TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(Number(p.amount))}</TableCell><TableCell className="hidden sm:table-cell"><Badge variant={methodBadgeVariant(p.method)}>{p.method}</Badge></TableCell><TableCell className="hidden md:table-cell">{formatDate(p.date)}</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>
           ))}
         </TableBody></Table></CardContent></Card></TabsContent>
         <TabsContent value="budgets"><Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Número</TableHead><TableHead>Cliente</TableHead><TableHead>Valor Total</TableHead><TableHead className="hidden sm:table-cell">Recebido</TableHead><TableHead className="hidden sm:table-cell">Progresso</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>

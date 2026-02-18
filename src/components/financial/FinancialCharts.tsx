@@ -17,6 +17,7 @@ const tooltipStyle = {
   border: "1px solid hsl(var(--border))",
   fontSize: "12px",
   backgroundColor: "hsl(var(--card))",
+  color: "hsl(var(--foreground))",
 };
 
 interface Props {
@@ -89,7 +90,7 @@ export function FinancialCharts({ totalApproved, totalReceived, balance, receive
             <AreaChart data={monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
               <Tooltip formatter={(v: number) => [formatCurrency(v), "Receitas"]} contentStyle={tooltipStyle} />
               <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.1} strokeWidth={2} />
             </AreaChart>
