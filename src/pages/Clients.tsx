@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { FilterBar } from "@/components/shared/FilterBar";
-import { PageLoading, PageError } from "@/components/shared/PageStates";
+import { PageLoading, PageError, TableEmpty } from "@/components/shared/PageStates";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -300,21 +300,7 @@ export default function Clients() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{activeFiltersCount > 0 ? "Nenhum cliente encontrado com os filtros aplicados" : "Nenhum cliente cadastrado"}</p>
-                    {activeFiltersCount > 0 ? (
-                      <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); }}>
-                        Limpar filtros
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
-                        <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro cliente
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
+                <TableEmpty icon={Users} colSpan={6} hasFilters={activeFiltersCount > 0} emptyMessage="Nenhum cliente cadastrado" filteredMessage="Nenhum cliente encontrado com os filtros aplicados" createLabel="Cadastrar primeiro cliente" onClearFilters={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); }} onCreate={openNew} />
               ) : paged.map((c) => (
                 <TableRow key={c.id} className="group cursor-pointer" onClick={() => navigate(`/clientes/${c.id}`)}>
                   <TableCell>
