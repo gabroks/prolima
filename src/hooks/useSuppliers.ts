@@ -55,7 +55,7 @@ export function useCreateSupplier() {
       if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("suppliers").select("id", { count: "exact", head: true }),
-        supabase.from("system_limits").select("max_suppliers").limit(1).single(),
+        supabase.from("system_limits").select("max_suppliers").limit(1).maybeSingle(),
       ]);
       if (limits && count !== null && count >= limits.max_suppliers) {
         throw new Error(`Limite de fornecedores atingido (${count}/${limits.max_suppliers}). Contate o administrador.`);

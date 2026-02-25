@@ -74,7 +74,7 @@ export function useCreateBudget() {
       if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("budgets").select("id", { count: "exact", head: true }),
-        supabase.from("system_limits").select("max_budgets").limit(1).single(),
+        supabase.from("system_limits").select("max_budgets").limit(1).maybeSingle(),
       ]);
       if (limits && count !== null && count >= limits.max_budgets) {
         throw new Error(`Limite de orçamentos atingido (${count}/${limits.max_budgets}). Contate o administrador.`);
@@ -199,7 +199,7 @@ export function useBudgetById(id: string | undefined) {
         .from("budgets")
         .select("*, budget_items(*)")
         .eq("id", id!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data as BudgetWithItems;
     },

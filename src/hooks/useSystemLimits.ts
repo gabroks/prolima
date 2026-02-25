@@ -18,9 +18,9 @@ export function useSystemLimits() {
         .from("system_limits")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as SystemLimits;
+      return data as SystemLimits | null;
     },
   });
 }

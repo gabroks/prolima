@@ -9,9 +9,9 @@ export function useCompanySettings() {
   return useQuery({
     queryKey: ["company_settings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("company_settings").select("*").limit(1).single();
+      const { data, error } = await supabase.from("company_settings").select("*").limit(1).maybeSingle();
       if (error) throw error;
-      return data as DbCompanySettings;
+      return data as DbCompanySettings | null;
     },
   });
 }

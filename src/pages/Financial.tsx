@@ -23,8 +23,8 @@ type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 const PAGE_SIZE = 15;
 
 export default function Financial() {
-  const { data: budgets = [], isLoading: lb } = useBudgets();
-  const { data: payments = [], isLoading: lp } = usePayments();
+  const { data: budgets = [], isLoading: lb, isError: budgetError } = useBudgets();
+  const { data: payments = [], isLoading: lp, isError: paymentError } = usePayments();
   const { data: expenses = [] } = useExpenses();
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
@@ -147,6 +147,17 @@ export default function Financial() {
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}</div>
         <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  if (budgetError || paymentError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <CalendarDays className="h-10 w-10 text-destructive mb-4 opacity-50" />
+        <h3 className="text-lg font-semibold">Erro ao carregar dados financeiros</h3>
+        <p className="text-sm text-muted-foreground mt-1">Verifique sua conexão e tente novamente.</p>
+        <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button>
       </div>
     );
   }
