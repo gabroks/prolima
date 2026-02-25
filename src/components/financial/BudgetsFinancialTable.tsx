@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle2, FileText, Filter } from "lucide-react";
+import { TableEmpty } from "@/components/shared/PageStates";
 import { formatCurrency } from "@/lib/formatters";
 import { budgetStatusConfig, type BudgetStatus } from "@/lib/formatters";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
@@ -74,13 +75,17 @@ export function BudgetsFinancialTable({ budgets, payments, search }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pagedBudgets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>Nenhum orçamento encontrado</p>
-                  </TableCell>
-                </TableRow>
+            {pagedBudgets.length === 0 ? (
+                <TableEmpty
+                  icon={FileText}
+                  colSpan={7}
+                  hasFilters={statusFilter !== "all" || !!search}
+                  emptyMessage="Nenhum orçamento cadastrado"
+                  filteredMessage="Nenhum orçamento encontrado com os filtros aplicados"
+                  createLabel="Ver orçamentos"
+                  onClearFilters={() => { setStatusFilter("all"); setPage(0); }}
+                  onCreate={() => {}}
+                />
               ) : pagedBudgets.map(b => {
                 const received = payments.filter(p => p.budget_id === b.id).reduce((s, p) => s + Number(p.amount), 0);
                 const pending = Number(b.total) - received;
