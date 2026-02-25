@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarClock, DollarSign, Receipt, FileText } from "lucide-react";
 import { formatCurrency, formatRelativeDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { useNavigate } from "react-router-dom";
+import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 import type { BudgetWithItems } from "@/hooks/useBudgets";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -69,7 +70,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
         <ScrollArea className="h-[280px] px-6 pb-4">
           <div className="space-y-3">
             {activityFeed.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade recente</p>
+              <WidgetEmpty icon={CalendarClock} title="Nenhuma atividade recente" subtitle="Registre pagamentos e despesas para acompanhar aqui" />
             ) : (
               activityFeed.map((item) => (
                 <div key={item.id} className="flex items-start gap-3 cursor-pointer hover:bg-muted/40 -mx-2 px-2 py-1.5 rounded transition-colors" onClick={() => navigate(item.href)}>

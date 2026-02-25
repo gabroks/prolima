@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CalendarClock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 import type { BudgetWithItems } from "@/hooks/useBudgets";
 
 interface ExpiringBudgetsProps {
@@ -57,11 +58,7 @@ export function ExpiringBudgets({ budgets }: ExpiringBudgetsProps) {
       </CardHeader>
       <CardContent>
         {totalCount === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <CalendarClock className="h-8 w-8 mb-2 opacity-20" />
-            <p className="text-sm font-medium">Nenhum vencimento próximo</p>
-            <p className="text-xs mt-0.5">Orçamentos em dia 🎉</p>
-          </div>
+          <WidgetEmpty icon={CalendarClock} title="Nenhum vencimento próximo" subtitle="Todos os orçamentos em dia" />
         ) : (
           <div className="space-y-2">
             {expiredBudgets.slice(0, 3).map(b => (

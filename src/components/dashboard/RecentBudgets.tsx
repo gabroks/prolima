@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
+import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import type { BudgetWithItems } from "@/hooks/useBudgets";
@@ -31,11 +32,7 @@ export function RecentBudgets({ budgets }: RecentBudgetsProps) {
       </CardHeader>
       <CardContent>
         {recentBudgets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Clock className="h-8 w-8 mb-2 opacity-20" />
-            <p className="text-sm font-medium">Nenhum orçamento ainda</p>
-            <p className="text-xs mt-0.5">Crie seu primeiro orçamento para vê-lo aqui</p>
-          </div>
+          <WidgetEmpty icon={Clock} title="Nenhum orçamento ainda" subtitle="Crie seu primeiro orçamento para vê-lo aqui" />
         ) : (
           <div className="divide-y">
             {recentBudgets.map((b) => {
