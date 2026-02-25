@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -81,7 +82,7 @@ export function ExpenseFormDialog({ open, onOpenChange, form, setForm, onSave, e
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={onSave} disabled={isSaving}>{editingId ? "Atualizar" : "Salvar"}</Button>
+          <Button onClick={onSave} disabled={isSaving}>{isSaving ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{editingId ? "Atualizando…" : "Salvando…"}</> : editingId ? "Atualizar" : "Salvar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
