@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign, MessageCircle, Receipt, Download } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
+import { exportToCSV } from "@/lib/exportCsv";
 
 type SortKey = "name" | "city" | "status";
 const PAGE_SIZE = 15;
@@ -88,6 +90,11 @@ export default function Suppliers() {
   const formatWhatsApp = (phone: string) => `https://wa.me/55${phone.replace(/\D/g, "")}`;
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "1") { openNew(); setSearchParams({}, { replace: true }); }
+  }, [searchParams]);
   const openEdit = (s: DbSupplier) => {
     setEditingId(s.id);
     setForm({
@@ -122,18 +129,15 @@ export default function Suppliers() {
     : undefined;
 
   const exportCSV = useCallback(() => {
-    const headers = ["Nome", "Tipo", "Documento", "Telefone", "Email", "Cidade", "Bairro", "Status"];
-    const rows = filtered.map(s => [
-      s.name, s.person_type === "fisica" ? "PF" : "PJ", s.document || "", s.phone || "",
-      s.email || "", s.city || "", s.neighborhood || "", s.active ? "Ativo" : "Inativo",
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `fornecedores_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} fornecedores exportados`);
+    exportToCSV({
+      headers: ["Nome", "Tipo", "Documento", "Telefone", "Email", "Cidade", "Bairro", "Status"],
+      rows: filtered.map(s => [
+        s.name, s.person_type === "fisica" ? "PF" : "PJ", s.document || "", s.phone || "",
+        s.email || "", s.city || "", s.neighborhood || "", s.active ? "Ativo" : "Inativo",
+      ]),
+      filename: "fornecedores",
+      successMessage: `${filtered.length} fornecedores exportados`,
+    });
   }, [filtered]);
 
   if (isLoading) {
