@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { SummaryCards } from "@/components/shared/SummaryCards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -177,30 +178,12 @@ export default function Materials() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Total", value: String(materials.length), icon: Package, bgColor: "bg-primary/10", iconColor: "text-primary", extra: `${categories.length} categoria${categories.length !== 1 ? "s" : ""}` },
-          { label: "Preço Médio", value: formatCurrency(avgPrice), icon: DollarSign, bgColor: "bg-primary/10", iconColor: "text-primary", extra: `${formatCurrency(minPrice)} – ${formatCurrency(maxPrice)}` },
-          { label: "Em Uso", value: String(materialsInUse), icon: ClipboardList, bgColor: materialsInUse > 0 ? "bg-primary/10" : "bg-muted", iconColor: materialsInUse > 0 ? "text-primary" : "text-muted-foreground", extra: unusedCount > 0 ? `${unusedCount} sem uso` : null },
-          { label: "Categorias", value: String(categories.length), icon: Layers, bgColor: "bg-primary/10", iconColor: "text-primary", extra: categories.length > 0 ? categories.slice(0, 2).join(", ") + (categories.length > 2 ? "…" : "") : null },
-        ].map(s => (
-          <Card key={s.label} className="p-4">
-            <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-lg ${s.bgColor} flex items-center justify-center`}>
-                <s.icon className={`h-5 w-5 ${s.iconColor}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-lg font-bold tabular-nums truncate">{s.value}</p>
-                {"extra" in s && s.extra && (
-                  <p className="text-[10px] text-muted-foreground truncate">{s.extra}</p>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <SummaryCards items={[
+        { label: "Total", value: String(materials.length), icon: Package, extra: `${categories.length} categoria${categories.length !== 1 ? "s" : ""}` },
+        { label: "Preço Médio", value: formatCurrency(avgPrice), icon: DollarSign, extra: `${formatCurrency(minPrice)} – ${formatCurrency(maxPrice)}` },
+        { label: "Em Uso", value: String(materialsInUse), icon: ClipboardList, bgColor: materialsInUse > 0 ? "bg-primary/10" : "bg-muted", iconColor: materialsInUse > 0 ? "text-primary" : "text-muted-foreground", extra: unusedCount > 0 ? `${unusedCount} sem uso` : null },
+        { label: "Categorias", value: String(categories.length), icon: Layers, extra: categories.length > 0 ? categories.slice(0, 2).join(", ") + (categories.length > 2 ? "…" : "") : null },
+      ]} />
 
       <FilterBar
         activeFiltersCount={activeFiltersCount}

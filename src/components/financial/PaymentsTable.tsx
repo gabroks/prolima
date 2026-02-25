@@ -2,8 +2,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CreditCard, Pencil, Plus, Trash2 } from "lucide-react";
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
+import { TableEmpty } from "@/components/shared/PageStates";
+import { CreditCard, Pencil, Trash2 } from "lucide-react";
 import { formatCurrency, formatDate, getInitials } from "@/lib/formatters";
 import type { DbPayment } from "@/hooks/usePayments";
 
@@ -41,19 +42,7 @@ export function PaymentsTable({ payments, activeFiltersCount, onOpenNew, onEdit,
           </TableHeader>
           <TableBody>
             {payments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  <p>{activeFiltersCount > 0 ? "Nenhum pagamento encontrado com os filtros aplicados" : "Nenhum pagamento registrado"}</p>
-                  {activeFiltersCount > 0 ? (
-                    onClearFilters && <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>Limpar filtros</Button>
-                  ) : (
-                    <Button variant="outline" size="sm" className="mt-3" onClick={onOpenNew}>
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />Registrar primeiro pagamento
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
+              <TableEmpty icon={CreditCard} colSpan={6} hasFilters={activeFiltersCount > 0} emptyMessage="Nenhum pagamento registrado" filteredMessage="Nenhum pagamento encontrado com os filtros aplicados" createLabel="Registrar primeiro pagamento" onClearFilters={onClearFilters || (() => {})} onCreate={onOpenNew} />
             ) : payments.map(p => (
               <TableRow key={p.id} className="group">
                 <TableCell>

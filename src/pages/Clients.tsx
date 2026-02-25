@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { SummaryCards } from "@/components/shared/SummaryCards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -204,30 +205,12 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Total", value: String(clients.length), icon: Users, bgColor: "bg-primary/10", iconColor: "text-primary" },
-          { label: "Ativos", value: String(activeCount), icon: UserCheck, bgColor: "bg-primary/10", iconColor: "text-primary", extra: inactiveCount > 0 ? `${inactiveCount} inativo${inactiveCount > 1 ? "s" : ""}` : null },
-          { label: "Pessoa Jurídica", value: String(pjCount), icon: Building2, bgColor: "bg-primary/10", iconColor: "text-primary", extra: clients.length > 0 ? `${Math.round((pjCount / clients.length) * 100)}%` : null },
-          { label: "Valor Gerado", value: formatCurrency(totalBudgetValue), icon: DollarSign, bgColor: totalBudgetValue > 0 ? "bg-primary/10" : "bg-muted", iconColor: totalBudgetValue > 0 ? "text-primary" : "text-muted-foreground" },
-        ].map(s => (
-          <Card key={s.label} className="p-4">
-            <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-lg ${s.bgColor} flex items-center justify-center`}>
-                <s.icon className={`h-5 w-5 ${s.iconColor}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-lg font-bold tabular-nums truncate">{s.value}</p>
-                {"extra" in s && s.extra && (
-                  <p className="text-[10px] text-muted-foreground">{s.extra}</p>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <SummaryCards items={[
+        { label: "Total", value: String(clients.length), icon: Users },
+        { label: "Ativos", value: String(activeCount), icon: UserCheck, extra: inactiveCount > 0 ? `${inactiveCount} inativo${inactiveCount > 1 ? "s" : ""}` : null },
+        { label: "Pessoa Jurídica", value: String(pjCount), icon: Building2, extra: clients.length > 0 ? `${Math.round((pjCount / clients.length) * 100)}%` : null },
+        { label: "Valor Gerado", value: formatCurrency(totalBudgetValue), icon: DollarSign, bgColor: totalBudgetValue > 0 ? "bg-primary/10" : "bg-muted", iconColor: totalBudgetValue > 0 ? "text-primary" : "text-muted-foreground" },
+      ]} />
 
       <FilterBar
         activeFiltersCount={activeFiltersCount}
