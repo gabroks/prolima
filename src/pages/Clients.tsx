@@ -10,7 +10,7 @@ import { FilterBar } from "@/components/shared/FilterBar";
 import { PageLoading, PageError } from "@/components/shared/PageStates";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useToggleClientStatus, ClientForm, DbClient } from "@/hooks/useClients";
 import { useBudgets } from "@/hooks/useBudgets";
