@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { FilterBar } from "@/components/shared/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -247,60 +248,60 @@ export default function Clients() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, telefone, documento, email, cidade…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="inactive">Inativos</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos tipos</SelectItem>
-            <SelectItem value="fisica">Pessoa Física</SelectItem>
-            <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
-          </SelectContent>
-        </Select>
-        {availableCities.length > 0 && (
-          <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); resetPage(); }}>
-            <SelectTrigger className="w-[160px]">
-              <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-              <SelectValue placeholder="Cidade" />
-            </SelectTrigger>
+      <FilterBar
+        activeFiltersCount={activeFiltersCount}
+        onClearFilters={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); resetPage(); }}
+        searchInput={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome, telefone, documento, email, cidade…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
+          </div>
+        }
+        filters={<>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[130px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas cidades</SelectItem>
-              {availableCities.map(city => (
-                <SelectItem key={city} value={city}>{city}</SelectItem>
-              ))}
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Inativos</SelectItem>
             </SelectContent>
           </Select>
-        )}
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
-          <SelectTrigger className="w-[150px]">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name">Nome A-Z</SelectItem>
-            <SelectItem value="date-desc">Mais recente</SelectItem>
-            <SelectItem value="date-asc">Mais antigo</SelectItem>
-            <SelectItem value="city">Cidade</SelectItem>
-          </SelectContent>
-        </Select>
-        {activeFiltersCount > 0 && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); resetPage(); }}>
-            Limpar filtros
-          </Button>
-        )}
-      </div>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos tipos</SelectItem>
+              <SelectItem value="fisica">Pessoa Física</SelectItem>
+              <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
+            </SelectContent>
+          </Select>
+          {availableCities.length > 0 && (
+            <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); resetPage(); }}>
+              <SelectTrigger className="w-full md:w-[160px]">
+                <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <SelectValue placeholder="Cidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas cidades</SelectItem>
+                {availableCities.map(city => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+            <SelectTrigger className="w-full md:w-[150px]">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Nome A-Z</SelectItem>
+              <SelectItem value="date-desc">Mais recente</SelectItem>
+              <SelectItem value="date-asc">Mais antigo</SelectItem>
+              <SelectItem value="city">Cidade</SelectItem>
+            </SelectContent>
+          </Select>
+        </>}
+      />
 
       {/* Table */}
       <Card>

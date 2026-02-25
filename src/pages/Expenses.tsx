@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { FilterBar } from "@/components/shared/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -244,66 +245,66 @@ export default function Expenses() {
       <ExpenseSummaryCards totalEntradas={totalEntradas} totalDespesas={totalDespesas} saldo={saldo} avgExpense={avgExpense} monthComparison={monthComparison} />
       <ExpenseCharts categoryBreakdown={categoryBreakdown} monthlyTrend={monthlyTrend} />
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar descrição, fornecedor, notas, nº orçamento…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
-        </div>
-        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={supplierFilter} onValueChange={(v) => { setSupplierFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos fornecedores</SelectItem>
-            <SelectItem value="none">Sem fornecedor</SelectItem>
-            {expenseSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[150px]">
-            <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo período</SelectItem>
-            <SelectItem value="this-month">Este mês</SelectItem>
-            <SelectItem value="last-month">Mês passado</SelectItem>
-            <SelectItem value="this-quarter">Trimestre</SelectItem>
-            <SelectItem value="this-year">Este ano</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={budgetFilter} onValueChange={(v) => { setBudgetFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Orçamento" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="none">Sem orçamento</SelectItem>
-            {budgets.map((b) => <SelectItem key={b.id} value={b.id}>{b.number}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
-          <SelectTrigger className="w-[160px]">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-desc">Mais recente</SelectItem>
-            <SelectItem value="date-asc">Mais antigo</SelectItem>
-            <SelectItem value="amount-desc">Maior valor</SelectItem>
-            <SelectItem value="amount-asc">Menor valor</SelectItem>
-          </SelectContent>
-        </Select>
-        {activeFiltersCount > 0 && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={clearFilters}>
-            Limpar filtros
-          </Button>
-        )}
-      </div>
+      <FilterBar
+        activeFiltersCount={activeFiltersCount}
+        onClearFilters={clearFilters}
+        searchInput={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar descrição, fornecedor, notas, nº orçamento…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
+          </div>
+        }
+        filters={<>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={supplierFilter} onValueChange={(v) => { setSupplierFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[160px]"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos fornecedores</SelectItem>
+              <SelectItem value="none">Sem fornecedor</SelectItem>
+              {expenseSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[150px]">
+              <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo período</SelectItem>
+              <SelectItem value="this-month">Este mês</SelectItem>
+              <SelectItem value="last-month">Mês passado</SelectItem>
+              <SelectItem value="this-quarter">Trimestre</SelectItem>
+              <SelectItem value="this-year">Este ano</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={budgetFilter} onValueChange={(v) => { setBudgetFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[170px]"><SelectValue placeholder="Orçamento" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="none">Sem orçamento</SelectItem>
+              {budgets.map((b) => <SelectItem key={b.id} value={b.id}>{b.number}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+            <SelectTrigger className="w-full md:w-[160px]">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Mais recente</SelectItem>
+              <SelectItem value="date-asc">Mais antigo</SelectItem>
+              <SelectItem value="amount-desc">Maior valor</SelectItem>
+              <SelectItem value="amount-asc">Menor valor</SelectItem>
+            </SelectContent>
+          </Select>
+        </>}
+      />
 
       {/* Table */}
       <Card>

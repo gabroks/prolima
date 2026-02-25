@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { FilterBar } from "@/components/shared/FilterBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBudgets } from "@/hooks/useBudgets";
@@ -209,48 +210,50 @@ export default function Financial() {
       <FinancialSummaryCards totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} profit={profit} profitMargin={profitMargin} monthComparison={monthComparison} />
       <FinancialCharts totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} receivedPct={receivedPct} methodBreakdown={methodBreakdown} monthlyRevenue={monthlyRevenue} />
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar cliente, nº orçamento, notas…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
-        </div>
-        <Select value={methodFilter} onValueChange={(v) => { setMethodFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Método" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[150px]">
-            <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo período</SelectItem>
-            <SelectItem value="this-month">Este mês</SelectItem>
-            <SelectItem value="last-month">Mês passado</SelectItem>
-            <SelectItem value="this-quarter">Trimestre</SelectItem>
-            <SelectItem value="this-year">Este ano</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
-          <SelectTrigger className="w-[160px]">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-desc">Mais recente</SelectItem>
-            <SelectItem value="date-asc">Mais antigo</SelectItem>
-            <SelectItem value="amount-desc">Maior valor</SelectItem>
-            <SelectItem value="amount-asc">Menor valor</SelectItem>
-          </SelectContent>
-        </Select>
-        {activeFiltersCount > 0 && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={clearFilters}>Limpar filtros</Button>
-        )}
-      </div>
+      <FilterBar
+        activeFiltersCount={activeFiltersCount}
+        onClearFilters={clearFilters}
+        searchInput={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar cliente, nº orçamento, notas…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
+          </div>
+        }
+        filters={<>
+          <Select value={methodFilter} onValueChange={(v) => { setMethodFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[140px]"><SelectValue placeholder="Método" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[150px]">
+              <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo período</SelectItem>
+              <SelectItem value="this-month">Este mês</SelectItem>
+              <SelectItem value="last-month">Mês passado</SelectItem>
+              <SelectItem value="this-quarter">Trimestre</SelectItem>
+              <SelectItem value="this-year">Este ano</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+            <SelectTrigger className="w-full md:w-[160px]">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Mais recente</SelectItem>
+              <SelectItem value="date-asc">Mais antigo</SelectItem>
+              <SelectItem value="amount-desc">Maior valor</SelectItem>
+              <SelectItem value="amount-asc">Menor valor</SelectItem>
+            </SelectContent>
+          </Select>
+        </>}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="payments" className="space-y-4">

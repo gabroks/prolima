@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { FilterBar } from "@/components/shared/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -220,40 +221,40 @@ export default function Materials() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, categoria ou observação…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
-        </div>
-        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
-          <SelectTrigger className="w-[160px]">
-            <Layers className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-            <SelectValue placeholder="Categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
-          <SelectTrigger className="w-[160px]">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name">Nome A-Z</SelectItem>
-            <SelectItem value="price-asc">Menor preço</SelectItem>
-            <SelectItem value="price-desc">Maior preço</SelectItem>
-            <SelectItem value="category">Categoria</SelectItem>
-          </SelectContent>
-        </Select>
-        {activeFiltersCount > 0 && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setSearch(""); setCategoryFilter("all"); resetPage(); }}>
-            Limpar filtros
-          </Button>
-        )}
-      </div>
+      <FilterBar
+        activeFiltersCount={activeFiltersCount}
+        onClearFilters={() => { setSearch(""); setCategoryFilter("all"); resetPage(); }}
+        searchInput={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome, categoria ou observação…" value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="pl-9" />
+          </div>
+        }
+        filters={<>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
+            <SelectTrigger className="w-full md:w-[160px]">
+              <Layers className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+            <SelectTrigger className="w-full md:w-[160px]">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Nome A-Z</SelectItem>
+              <SelectItem value="price-asc">Menor preço</SelectItem>
+              <SelectItem value="price-desc">Maior preço</SelectItem>
+              <SelectItem value="category">Categoria</SelectItem>
+            </SelectContent>
+          </Select>
+        </>}
+      />
 
       {/* Table */}
       <Card>
