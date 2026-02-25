@@ -275,8 +275,12 @@ export default function Materials() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{activeFiltersCount > 0 ? "Nenhum material encontrado" : "Nenhum material cadastrado"}</p>
-                    {activeFiltersCount === 0 && (
+                    <p>{activeFiltersCount > 0 ? "Nenhum material encontrado com os filtros aplicados" : "Nenhum material cadastrado"}</p>
+                    {activeFiltersCount > 0 ? (
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSearch(""); setCategoryFilter("all"); }}>
+                        Limpar filtros
+                      </Button>
+                    ) : (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro material
                       </Button>

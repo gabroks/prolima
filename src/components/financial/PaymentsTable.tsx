@@ -13,6 +13,7 @@ interface Props {
   onOpenNew: () => void;
   onEdit: (p: DbPayment) => void;
   onDelete: (id: string) => void;
+  onClearFilters?: () => void;
 }
 
 const methodBadgeVariant = (m: string) => {
@@ -23,7 +24,7 @@ const methodBadgeVariant = (m: string) => {
   }
 };
 
-export function PaymentsTable({ payments, activeFiltersCount, onOpenNew, onEdit, onDelete }: Props) {
+export function PaymentsTable({ payments, activeFiltersCount, onOpenNew, onEdit, onDelete, onClearFilters }: Props) {
   return (
     <Card>
       <CardContent className="p-0">
@@ -43,8 +44,10 @@ export function PaymentsTable({ payments, activeFiltersCount, onOpenNew, onEdit,
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                   <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  <p>{activeFiltersCount > 0 ? "Nenhum pagamento encontrado" : "Nenhum pagamento registrado"}</p>
-                  {activeFiltersCount === 0 && (
+                  <p>{activeFiltersCount > 0 ? "Nenhum pagamento encontrado com os filtros aplicados" : "Nenhum pagamento registrado"}</p>
+                  {activeFiltersCount > 0 ? (
+                    onClearFilters && <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>Limpar filtros</Button>
+                  ) : (
                     <Button variant="outline" size="sm" className="mt-3" onClick={onOpenNew}>
                       <Plus className="h-3.5 w-3.5 mr-1.5" />Registrar primeiro pagamento
                     </Button>

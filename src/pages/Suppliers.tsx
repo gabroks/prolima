@@ -295,8 +295,12 @@ export default function Suppliers() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{activeFiltersCount > 0 ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}</p>
-                    {activeFiltersCount === 0 && (
+                    <p>{activeFiltersCount > 0 ? "Nenhum fornecedor encontrado com os filtros aplicados" : "Nenhum fornecedor cadastrado"}</p>
+                    {activeFiltersCount > 0 ? (
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setCityFilter("all"); }}>
+                        Limpar filtros
+                      </Button>
+                    ) : (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro fornecedor
                       </Button>

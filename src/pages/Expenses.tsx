@@ -325,8 +325,12 @@ export default function Expenses() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Receipt className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{activeFiltersCount > 0 ? "Nenhuma despesa encontrada" : "Nenhuma despesa registrada"}</p>
-                    {activeFiltersCount === 0 && (
+                    <p>{activeFiltersCount > 0 ? "Nenhuma despesa encontrada com os filtros aplicados" : "Nenhuma despesa registrada"}</p>
+                    {activeFiltersCount > 0 ? (
+                      <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+                        Limpar filtros
+                      </Button>
+                    ) : (
                       <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" />Registrar primeira despesa
                       </Button>
