@@ -8,9 +8,8 @@ import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { FilterBar } from "@/components/shared/FilterBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBudgets } from "@/hooks/useBudgets";
-import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment, type PaymentForm, type DbPayment } from "@/hooks/usePayments";
-import { useExpenses } from "@/hooks/useExpenses";
+import { useCreatePayment, useUpdatePayment, useDeletePayment, type PaymentForm, type DbPayment } from "@/hooks/usePayments";
+import { useFinancialData, useFilteredPayments, type SortKey } from "@/hooks/useFinancialData";
 import { Plus, Search, ArrowUpDown, CalendarDays, Download } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV } from "@/lib/exportCsv";
@@ -22,18 +21,19 @@ import { PaymentsTable } from "@/components/financial/PaymentsTable";
 import { BudgetsFinancialTable } from "@/components/financial/BudgetsFinancialTable";
 
 const PAYMENT_METHODS = ["PIX", "Dinheiro", "Cartão", "Boleto", "Transferência"];
-type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 const PAGE_SIZE = 15;
 
 export default function Financial() {
-  const { data: budgets = [], isLoading: lb, isError: budgetError } = useBudgets();
-  const { data: payments = [], isLoading: lp, isError: paymentError } = usePayments();
-  const { data: expenses = [] } = useExpenses();
+  const {
+    budgets, payments, approvedBudgets,
+    isLoading, isError,
+    totals, monthComparison, methodBreakdown, monthlyRevenue, periodBounds,
+  } = useFinancialData();
+
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
   const deletePaymentMut = useDeletePayment();
 
-  const approvedBudgets = budgets.filter(b => b.status === "approved");
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("all");
@@ -44,71 +44,7 @@ export default function Financial() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<PaymentForm>>({ method: "PIX", date: new Date().toISOString().split("T")[0] });
 
-  const totalApproved = approvedBudgets.reduce((s, b) => s + Number(b.total), 0);
-  const totalReceived = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const balance = totalApproved - totalReceived;
-  const profit = totalReceived - totalExpenses;
-  const receivedPct = totalApproved > 0 ? Math.round((totalReceived / totalApproved) * 100) : 0;
-  const profitMargin = totalReceived > 0 ? ((profit / totalReceived) * 100).toFixed(1) : "0.0";
-
-  const monthComparison = useMemo(() => {
-    const now = new Date();
-    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
-    const curTotal = payments.filter(p => p.date.startsWith(curMonth)).reduce((s, p) => s + Number(p.amount), 0);
-    const prevTotal = payments.filter(p => p.date.startsWith(prevMonth)).reduce((s, p) => s + Number(p.amount), 0);
-    const curCount = payments.filter(p => p.date.startsWith(curMonth)).length;
-    return { curTotal, prevTotal, curCount, diff: prevTotal > 0 ? ((curTotal - prevTotal) / prevTotal) * 100 : 0 };
-  }, [payments]);
-
-  const methodBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
-    payments.forEach(p => { map[p.method] = (map[p.method] || 0) + Number(p.amount); });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, [payments]);
-
-  const monthlyRevenue = useMemo(() => {
-    const months: Record<string, number> = {};
-    payments.forEach(p => { const key = p.date.slice(0, 7); months[key] = (months[key] || 0) + Number(p.amount); });
-    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([key, total]) => ({ month: monthNames[parseInt(key.split("-")[1]) - 1], total }));
-  }, [payments]);
-
-  const periodBounds = useMemo(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    return {
-      "this-month": new Date(y, m, 1).toISOString().split("T")[0],
-      "last-month": new Date(y, m - 1, 1).toISOString().split("T")[0],
-      "last-month-end": new Date(y, m, 0).toISOString().split("T")[0],
-      "this-quarter": new Date(y, Math.floor(m / 3) * 3, 1).toISOString().split("T")[0],
-      "this-year": `${y}-01-01`,
-    };
-  }, []);
-
-  const filteredPayments = useMemo(() => {
-    const q = search.toLowerCase();
-    let result = payments.filter(p => {
-      const matchSearch = !q || p.client_name.toLowerCase().includes(q) || p.budget_number.toLowerCase().includes(q) || (p.notes?.toLowerCase().includes(q));
-      const matchMethod = methodFilter === "all" || p.method === methodFilter;
-      let matchPeriod = true;
-      if (periodFilter === "this-month") matchPeriod = p.date >= periodBounds["this-month"];
-      else if (periodFilter === "last-month") matchPeriod = p.date >= periodBounds["last-month"] && p.date <= periodBounds["last-month-end"];
-      else if (periodFilter === "this-quarter") matchPeriod = p.date >= periodBounds["this-quarter"];
-      else if (periodFilter === "this-year") matchPeriod = p.date >= periodBounds["this-year"];
-      return matchSearch && matchMethod && matchPeriod;
-    });
-    switch (sortBy) {
-      case "date-desc": result.sort((a, b) => b.date.localeCompare(a.date)); break;
-      case "date-asc": result.sort((a, b) => a.date.localeCompare(b.date)); break;
-      case "amount-desc": result.sort((a, b) => Number(b.amount) - Number(a.amount)); break;
-      case "amount-asc": result.sort((a, b) => Number(a.amount) - Number(b.amount)); break;
-    }
-    return result;
-  }, [payments, search, methodFilter, periodFilter, sortBy, periodBounds]);
+  const filteredPayments = useFilteredPayments(payments, periodBounds, { search, methodFilter, periodFilter, sortBy });
 
   const totalPages = Math.ceil(filteredPayments.length / PAGE_SIZE);
   const pagedPayments = useMemo(() => filteredPayments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filteredPayments, page]);
@@ -127,6 +63,7 @@ export default function Financial() {
   useEffect(() => {
     if (searchParams.get("new") === "1") { openNew(); setSearchParams({}, { replace: true }); }
   }, [searchParams]);
+
   const openEdit = (p: DbPayment) => {
     setEditingId(p.id);
     setForm({ budgetId: p.budget_id || "", budgetNumber: p.budget_number, clientName: p.client_name, amount: Number(p.amount), method: p.method, date: p.date, notes: p.notes || undefined });
@@ -152,16 +89,13 @@ export default function Financial() {
   const exportPaymentsCSV = useCallback(() => {
     exportToCSV({
       headers: ["Data", "Cliente", "Orçamento", "Valor", "Método", "Observações"],
-      rows: filteredPayments.map(p => [
-        p.date, p.client_name, p.budget_number, String(p.amount),
-        p.method, p.notes || "",
-      ]),
+      rows: filteredPayments.map(p => [p.date, p.client_name, p.budget_number, String(p.amount), p.method, p.notes || ""]),
       filename: "pagamentos",
       successMessage: `${filteredPayments.length} pagamentos exportados`,
     });
   }, [filteredPayments]);
 
-  if (lb || lp) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
@@ -171,7 +105,7 @@ export default function Financial() {
     );
   }
 
-  if (budgetError || paymentError) {
+  if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <CalendarDays className="h-10 w-10 text-destructive mb-4 opacity-50" />
@@ -207,8 +141,8 @@ export default function Financial() {
         </div>
       </div>
 
-      <FinancialSummaryCards totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} profit={profit} profitMargin={profitMargin} monthComparison={monthComparison} />
-      <FinancialCharts totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} receivedPct={receivedPct} methodBreakdown={methodBreakdown} monthlyRevenue={monthlyRevenue} />
+      <FinancialSummaryCards totalApproved={totals.totalApproved} totalReceived={totals.totalReceived} balance={totals.balance} profit={totals.profit} profitMargin={totals.profitMargin} monthComparison={monthComparison} />
+      <FinancialCharts totalApproved={totals.totalApproved} totalReceived={totals.totalReceived} balance={totals.balance} receivedPct={totals.receivedPct} methodBreakdown={methodBreakdown} monthlyRevenue={monthlyRevenue} />
 
       <FilterBar
         activeFiltersCount={activeFiltersCount}
@@ -255,30 +189,19 @@ export default function Financial() {
         </>}
       />
 
-      {/* Tabs */}
       <Tabs defaultValue="payments" className="space-y-4">
         <TabsList>
           <TabsTrigger value="payments">Pagamentos ({payments.length})</TabsTrigger>
           <TabsTrigger value="budgets">Orçamentos ({budgets.length})</TabsTrigger>
         </TabsList>
-
         <TabsContent value="payments">
-          <PaymentsTable
-            payments={pagedPayments}
-            activeFiltersCount={activeFiltersCount}
-            onOpenNew={openNew}
-            onEdit={openEdit}
-            onDelete={setDeleteId}
-            onClearFilters={clearFilters}
-          />
+          <PaymentsTable payments={pagedPayments} activeFiltersCount={activeFiltersCount} onOpenNew={openNew} onEdit={openEdit} onDelete={setDeleteId} onClearFilters={clearFilters} />
         </TabsContent>
-
         <TabsContent value="budgets">
           <BudgetsFinancialTable budgets={budgets} payments={payments} search={search} />
         </TabsContent>
       </Tabs>
 
-      {/* Payments pagination (only visible on payments tab) */}
       <PaginationFooter
         page={page} totalPages={totalPages} totalItems={filteredPayments.length} pageSize={PAGE_SIZE}
         onPageChange={setPage} label="pagamentos"
@@ -286,17 +209,7 @@ export default function Financial() {
         filterSummary={activeFiltersCount > 0 ? [methodFilter !== "all" && methodFilter, periodFilter !== "all" && (periodFilter === "this-month" ? "Este mês" : periodFilter === "last-month" ? "Mês passado" : periodFilter === "this-quarter" ? "Trimestre" : "Este ano"), search && `"${search}"`].filter(Boolean).join(", ") : undefined}
       />
 
-      <PaymentFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        form={form}
-        setForm={setForm}
-        onSave={handleSave}
-        editingId={editingId}
-        approvedBudgets={approvedBudgets}
-        payments={payments}
-        isSaving={createPayment.isPending || updatePayment.isPending}
-      />
+      <PaymentFormDialog open={dialogOpen} onOpenChange={setDialogOpen} form={form} setForm={setForm} onSave={handleSave} editingId={editingId} approvedBudgets={approvedBudgets} payments={payments} isSaving={createPayment.isPending || updatePayment.isPending} />
 
       <DeleteConfirmDialog
         open={!!deleteId} onOpenChange={() => setDeleteId(null)} onConfirm={handleDelete}
