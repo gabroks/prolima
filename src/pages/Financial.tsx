@@ -266,6 +266,7 @@ export default function Financial() {
             onOpenNew={openNew}
             onEdit={openEdit}
             onDelete={setDeleteId}
+            onClearFilters={clearFilters}
           />
         </TabsContent>
 
