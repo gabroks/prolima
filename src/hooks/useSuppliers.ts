@@ -95,7 +95,12 @@ export function useDeleteSupplier() {
       const { error } = await supabase.from("suppliers").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor removido!"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["suppliers"] });
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+      qc.invalidateQueries({ queryKey: ["usage_counts"] });
+      toast.success("Fornecedor removido!");
+    },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover fornecedor"),
   });
 }

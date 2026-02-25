@@ -114,6 +114,9 @@ export function useDeleteClient() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: ["payments"] });
+      qc.invalidateQueries({ queryKey: ["usage_counts"] });
       toast.success("Cliente removido!");
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover cliente"),
