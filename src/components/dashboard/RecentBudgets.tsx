@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
 import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 import { useNavigate } from "react-router-dom";
-import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
+import { formatCurrency, formatRelativeDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import type { BudgetWithItems } from "@/hooks/useBudgets";
 
 interface RecentBudgetsProps {
@@ -52,7 +52,7 @@ export function RecentBudgets({ budgets }: RecentBudgetsProps) {
                   </div>
                   <div className="text-right ml-4 shrink-0">
                     <p className="text-sm font-semibold tabular-nums">{formatCurrency(Number(b.total))}</p>
-                    <p className="text-[10px] text-muted-foreground tabular-nums">{formatDate(b.created_at)}</p>
+                    <p className="text-[10px] text-muted-foreground tabular-nums">{formatRelativeDate(b.created_at)}</p>
                   </div>
                 </div>
               );

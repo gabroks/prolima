@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock } from "lucide-react";
-import { formatDate } from "@/lib/formatters";
+import { formatRelativeDate } from "@/lib/formatters";
 import { LucideIcon } from "lucide-react";
 import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 
@@ -40,7 +40,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
                 <p className="text-sm leading-snug truncate">{item.title}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs font-medium text-muted-foreground">{item.subtitle}</span>
-                  <span className="text-[10px] text-muted-foreground tabular-nums">• {formatDate(item.date)}</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">• {formatRelativeDate(item.date)}</span>
                 </div>
               </div>
             </div>
