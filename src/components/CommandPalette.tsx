@@ -157,7 +157,7 @@ export function CommandPalette() {
           {recentClients.length > 0 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Clientes recentes">
+              <CommandGroup heading={`Clientes recentes (${clients.length})`}>
                 {recentClients.map(c => (
                   <CommandItem
                     key={c.id}
@@ -176,7 +176,7 @@ export function CommandPalette() {
           {recentBudgets.length > 0 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Orçamentos recentes">
+              <CommandGroup heading={`Orçamentos recentes (${budgets.length})`}>
                 {recentBudgets.map(b => (
                   <CommandItem
                     key={b.id}
@@ -195,7 +195,7 @@ export function CommandPalette() {
           {recentSuppliers.length > 0 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Fornecedores">
+              <CommandGroup heading={`Fornecedores (${suppliers.filter(s => s.active).length})`}>
                 {recentSuppliers.map(s => (
                   <CommandItem
                     key={s.id}
@@ -214,7 +214,7 @@ export function CommandPalette() {
           {recentMaterials.length > 0 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Materiais">
+              <CommandGroup heading={`Materiais (${materials.length})`}>
                 {recentMaterials.map(m => (
                   <CommandItem
                     key={m.id}
