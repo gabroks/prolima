@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock } from "lucide-react";
 import { formatDate } from "@/lib/formatters";
 import { LucideIcon } from "lucide-react";
+import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 
 interface ActivityItem {
   id: string;
@@ -26,6 +27,9 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {items.length === 0 ? (
+          <WidgetEmpty icon={CalendarClock} title="Nenhuma atividade recente" />
+        ) : (
         <div className="space-y-3">
           {items.map((item) => (
             <div key={item.id} className="flex items-start gap-3">
@@ -42,6 +46,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
             </div>
           ))}
         </div>
+        )}
       </CardContent>
     </Card>
   );

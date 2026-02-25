@@ -3,6 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertCircle, TrendingUp, Target, XCircle } from "lucide-react";
+import { WidgetEmpty } from "@/components/shared/WidgetEmpty";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/formatters";
 import { budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
@@ -120,7 +121,7 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, re
                 );
               })
             ) : (
-              <p className="text-sm text-muted-foreground">Nenhuma pendência 🎉</p>
+              <WidgetEmpty icon={AlertCircle} title="Nenhuma pendência" subtitle="Todos os orçamentos resolvidos" />
             )}
             {pendingBudgets.length > 3 && (
               <p className="text-[11px] text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => navigate("/orcamentos")}>
