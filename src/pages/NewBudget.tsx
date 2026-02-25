@@ -74,6 +74,15 @@ export default function NewBudget() {
   const [step, setStep] = useState(1);
   const [initialized, setInitialized] = useState(false);
 
+  // Unsaved changes guard
+  const hasUnsavedData = clientId || items.length > 0 || serviceDescription || paymentTerms || generalNotes;
+  useEffect(() => {
+    if (!hasUnsavedData) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedData]);
+
   // Populate form when editing
   useEffect(() => {
     if (isEditMode && existingBudget && !initialized) {

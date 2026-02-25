@@ -28,7 +28,7 @@ const emptyForm: ClientForm = { name: "", phone: "", personType: "fisica", docum
 
 export default function Clients() {
   const navigate = useNavigate();
-  const { data: clients = [], isLoading } = useClients();
+  const { data: clients = [], isLoading, isError } = useClients();
   const { data: budgets = [] } = useBudgets();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
@@ -178,6 +178,17 @@ export default function Clients() {
           {[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}
         </div>
         <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Users className="h-10 w-10 text-destructive mb-4 opacity-50" />
+        <h3 className="text-lg font-semibold">Erro ao carregar clientes</h3>
+        <p className="text-sm text-muted-foreground mt-1">Verifique sua conexão e tente novamente.</p>
+        <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button>
       </div>
     );
   }
