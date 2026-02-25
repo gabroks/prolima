@@ -108,7 +108,7 @@ export default function Dashboard() {
       )}
 
       {/* Summary Cards */}
-      <SummaryCards cards={summaryCards} />
+      <SummaryCards cards={summaryCards} isLoading={data.isLoading} />
 
       {/* Conversion Metrics */}
       <ConversionMetrics budgets={data.budgets} approvedBudgets={data.approvedBudgets} pendingBudgets={data.pendingBudgets} rejectedCount={data.rejectedBudgets.length} />
