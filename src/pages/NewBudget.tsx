@@ -73,6 +73,7 @@ export default function NewBudget() {
   const [generalNotes, setGeneralNotes] = useState("");
   const [step, setStep] = useState(1);
   const [initialized, setInitialized] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   // Unsaved changes guard
   const hasUnsavedData = clientId || items.length > 0 || serviceDescription || paymentTerms || generalNotes;
@@ -82,6 +83,10 @@ export default function NewBudget() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedData]);
+
+  const handleCancel = () => {
+    if (hasUnsavedData) { setCancelDialogOpen(true); } else { navigate("/orcamentos"); }
+  };
 
   // Populate form when editing
   useEffect(() => {
@@ -180,7 +185,7 @@ export default function NewBudget() {
           <h2 className="text-2xl font-bold">{isEditMode ? "Editar Orçamento" : "Novo Orçamento"}</h2>
           <p className="text-sm text-muted-foreground mt-0.5"><span className="font-mono font-semibold text-primary">{budgetNumber}</span> • {isEditMode ? "Atualize as informações do orçamento" : "Preencha as informações para gerar o orçamento"}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate("/orcamentos")}><X className="h-4 w-4 mr-1.5" />Cancelar</Button>
+        <Button variant="outline" size="sm" onClick={handleCancel}><X className="h-4 w-4 mr-1.5" />Cancelar</Button>
       </div>
       {!isEditMode && budgetQuota.isAtLimit && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -289,6 +294,20 @@ export default function NewBudget() {
         </div>
         <DialogFooter><Button variant="outline" onClick={() => setItemDialogOpen(false)}>Cancelar</Button><Button onClick={saveItem}>{editingItemId ? "Atualizar" : "Adicionar"}</Button></DialogFooter>
       </DialogContent></Dialog>
+
+      {/* Cancel confirmation dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Descartar orçamento?</DialogTitle>
+            <DialogDescription>Você tem dados não salvos. Ao sair, todas as informações preenchidas serão perdidas.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>Continuar editando</Button>
+            <Button variant="destructive" onClick={() => navigate("/orcamentos")}>Descartar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
