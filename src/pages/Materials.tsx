@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { FilterBar } from "@/components/shared/FilterBar";
-import { PageLoading, PageError } from "@/components/shared/PageStates";
+import { PageLoading, PageError, TableEmpty } from "@/components/shared/PageStates";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -254,21 +254,7 @@ export default function Materials() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{activeFiltersCount > 0 ? "Nenhum material encontrado com os filtros aplicados" : "Nenhum material cadastrado"}</p>
-                    {activeFiltersCount > 0 ? (
-                      <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSearch(""); setCategoryFilter("all"); }}>
-                        Limpar filtros
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
-                        <Plus className="h-3.5 w-3.5 mr-1.5" />Cadastrar primeiro material
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
+                <TableEmpty icon={Package} colSpan={7} hasFilters={activeFiltersCount > 0} emptyMessage="Nenhum material cadastrado" filteredMessage="Nenhum material encontrado com os filtros aplicados" createLabel="Cadastrar primeiro material" onClearFilters={() => { setSearch(""); setCategoryFilter("all"); }} onCreate={openNew} />
               ) : paged.map((m) => {
                 const usage = materialUsageStats.get(m.id);
                 const priceVsAvg = avgPrice > 0 ? ((m.base_price - avgPrice) / avgPrice) * 100 : 0;
