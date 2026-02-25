@@ -16,7 +16,7 @@ import { usePayments } from "@/hooks/usePayments";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
   ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2, Download, Pencil,
-  ArrowUpRight, ArrowDownRight,
+  ArrowUpRight, ArrowDownRight, Loader2,
 } from "lucide-react";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -43,6 +43,20 @@ export default function Budgets() {
   const [page, setPage] = useState(0);
   const [detailBudget, setDetailBudget] = useState<BudgetWithItems | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+
+  const handleDownloadPdf = async (budget: BudgetWithItems) => {
+    if (generatingPdfId) return;
+    setGeneratingPdfId(budget.id);
+    try {
+      await downloadBudgetPdf(budget, companySettings);
+      toast.success("PDF gerado!");
+    } catch {
+      toast.error("Erro ao gerar PDF");
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -277,7 +291,7 @@ export default function Budgets() {
                       <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/editar-orcamento/${b.id}`)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadBudgetPdf(b, companySettings).then(() => toast.success("PDF gerado!"))} title="Baixar PDF"><Download className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadPdf(b)} disabled={generatingPdfId === b.id} title="Baixar PDF">{generatingPdfId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}</Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(b)} disabled={duplicateBudget.isPending} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(b.id)} disabled={deleteBudget.isPending} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
@@ -374,8 +388,8 @@ export default function Budgets() {
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="default" size="sm" onClick={() => downloadBudgetPdf(detailBudget, companySettings).then(() => toast.success("PDF gerado!"))}>
-                      <Download className="h-3.5 w-3.5 mr-1.5" />Baixar PDF
+                    <Button variant="default" size="sm" onClick={() => handleDownloadPdf(detailBudget)} disabled={generatingPdfId === detailBudget.id}>
+                      {generatingPdfId === detailBudget.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}Baixar PDF
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => { setDetailBudget(null); navigate(`/editar-orcamento/${detailBudget.id}`); }}>
                       <Pencil className="h-3.5 w-3.5 mr-1.5" />Editar
