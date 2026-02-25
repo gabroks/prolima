@@ -127,6 +127,8 @@ export function useCreateBudget() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
       qc.invalidateQueries({ queryKey: ["usage_counts"] });
+      qc.invalidateQueries({ queryKey: ["payments"] });
+      qc.invalidateQueries({ queryKey: ["expenses"] });
       toast.success("Orçamento salvo!");
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao salvar orçamento"),
@@ -184,6 +186,8 @@ export function useUpdateBudget() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: ["payments"] });
+      qc.invalidateQueries({ queryKey: ["expenses"] });
       toast.success("Orçamento atualizado!");
     },
     onError: () => toast.error("Erro ao atualizar orçamento"),
@@ -231,6 +235,8 @@ export function useDeleteBudget() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: ["payments"] });
+      qc.invalidateQueries({ queryKey: ["expenses"] });
       toast.success("Orçamento excluído!");
     },
     onError: () => toast.error("Erro ao excluir orçamento"),

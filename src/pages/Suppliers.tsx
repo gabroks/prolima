@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
-import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign, MessageCircle, Receipt } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign, MessageCircle, Receipt, Download } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 
@@ -121,6 +121,21 @@ export default function Suppliers() {
     ? [statusFilter !== "all" && (statusFilter === "active" ? "Ativos" : "Inativos"), typeFilter !== "all" && (typeFilter === "fisica" ? "PF" : "PJ"), cityFilter !== "all" && cityFilter, search && `"${search}"`].filter(Boolean).join(", ")
     : undefined;
 
+  const exportCSV = useCallback(() => {
+    const headers = ["Nome", "Tipo", "Documento", "Telefone", "Email", "Cidade", "Bairro", "Status"];
+    const rows = filtered.map(s => [
+      s.name, s.person_type === "fisica" ? "PF" : "PJ", s.document || "", s.phone || "",
+      s.email || "", s.city || "", s.neighborhood || "", s.active ? "Ativo" : "Inativo",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `fornecedores_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} fornecedores exportados`);
+  }, [filtered]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -169,9 +184,17 @@ export default function Suppliers() {
             {activeFiltersCount > 0 && <span className="ml-2 text-primary font-medium">• {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""} ativo{activeFiltersCount > 1 ? "s" : ""}</span>}
           </p>
         </div>
-        <QuotaButton resource="suppliers" onClick={openNew} className="shadow-md shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" />Novo Fornecedor
-        </QuotaButton>
+        <div className="flex items-center gap-2">
+          {filtered.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
+          )}
+          <QuotaButton resource="suppliers" onClick={openNew} className="shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" />Novo Fornecedor
+          </QuotaButton>
+        </div>
       </div>
 
       {/* Stats */}
