@@ -27,7 +27,7 @@ const PAGE_SIZE = 15;
 const emptyForm: Partial<ExpenseForm> = { category: "Material", date: new Date().toISOString().split("T")[0] };
 
 export default function Expenses() {
-  const { data: expenses = [], isLoading } = useExpenses();
+  const { data: expenses = [], isLoading, isError } = useExpenses();
   const { data: payments = [] } = usePayments();
   const { data: budgets = [] } = useBudgets();
   const { data: suppliers = [] } = useSuppliers();
@@ -182,6 +182,17 @@ export default function Expenses() {
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}</div>
         <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Receipt className="h-10 w-10 text-destructive mb-4 opacity-50" />
+        <h3 className="text-lg font-semibold">Erro ao carregar despesas</h3>
+        <p className="text-sm text-muted-foreground mt-1">Verifique sua conexão e tente novamente.</p>
+        <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button>
       </div>
     );
   }
