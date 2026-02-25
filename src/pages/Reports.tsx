@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { PageLoading } from "@/components/shared/PageStates";
 import { useClients } from "@/hooks/useClients";
 import { useBudgets } from "@/hooks/useBudgets";
 import { usePayments } from "@/hooks/usePayments";
@@ -187,18 +187,7 @@ export default function Reports() {
     toast.success("Relatório exportado!");
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-12 w-full" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
-        </div>
-        <Skeleton className="h-64" />
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoading cards={6} />;
 
   const kpis: KPI[] = [
     { label: "Receitas", value: formatCurrency(totalReceitas), icon: TrendingUp, color: "text-primary", variation: vReceitas },
