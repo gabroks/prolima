@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
 import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, DollarSign, Layers, ClipboardList, TrendingUp, TrendingDown, Download } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
+import { exportToCSV } from "@/lib/exportCsv";
 
 type SortKey = "name" | "price-asc" | "price-desc" | "category";
 const PAGE_SIZE = 15;
@@ -102,6 +104,11 @@ export default function Materials() {
   }, [deleteId, materials]);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "1") { openNew(); setSearchParams({}, { replace: true }); }
+  }, [searchParams]);
   const openEdit = (m: DbMaterial) => {
     setEditingId(m.id);
     setForm({
@@ -129,18 +136,15 @@ export default function Materials() {
   };
 
   const exportCSV = useCallback(() => {
-    const headers = ["Nome", "Categoria", "Unidade Cobrança", "Unidade Medida", "Preço Base", "Observações"];
-    const rows = filtered.map(m => [
-      m.name, m.category || "", m.charge_unit, m.measure_unit,
-      String(m.base_price), m.notes || "",
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `materiais_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} materiais exportados`);
+    exportToCSV({
+      headers: ["Nome", "Categoria", "Unidade Cobrança", "Unidade Medida", "Preço Base", "Observações"],
+      rows: filtered.map(m => [
+        m.name, m.category || "", m.charge_unit, m.measure_unit,
+        String(m.base_price), m.notes || "",
+      ]),
+      filename: "materiais",
+      successMessage: `${filtered.length} materiais exportados`,
+    });
   }, [filtered]);
 
   if (isLoading) {

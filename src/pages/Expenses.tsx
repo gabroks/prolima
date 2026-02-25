@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, type
 import { Plus, Search, Pencil, Trash2, Receipt, ArrowUpDown, CalendarDays, Download } from "lucide-react";
 import { formatCurrency, formatDate, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
+import { exportToCSV } from "@/lib/exportCsv";
 import { ExpenseSummaryCards } from "@/components/expenses/ExpenseSummaryCards";
 import { ExpenseCharts } from "@/components/expenses/ExpenseCharts";
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
@@ -131,6 +133,11 @@ export default function Expenses() {
   }, [deleteId, expenses]);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "1") { openNew(); setSearchParams({}, { replace: true }); }
+  }, [searchParams]);
   const openEdit = (e: DbExpense) => {
     setEditingId(e.id);
     setForm({
@@ -168,18 +175,15 @@ export default function Expenses() {
   const clearFilters = () => { setSearch(""); setCategoryFilter("all"); setSupplierFilter("all"); setBudgetFilter("all"); setPeriodFilter("all"); resetPage(); };
 
   const exportCSV = useCallback(() => {
-    const headers = ["Data", "Descrição", "Categoria", "Fornecedor", "Orçamento", "Valor", "Observações"];
-    const rows = filtered.map(e => [
-      e.date, e.description, e.category, e.supplier_name || "",
-      e.budget_number || "", String(e.amount), e.notes || "",
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `despesas_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} despesas exportadas`);
+    exportToCSV({
+      headers: ["Data", "Descrição", "Categoria", "Fornecedor", "Orçamento", "Valor", "Observações"],
+      rows: filtered.map(e => [
+        e.date, e.description, e.category, e.supplier_name || "",
+        e.budget_number || "", String(e.amount), e.notes || "",
+      ]),
+      filename: "despesas",
+      successMessage: `${filtered.length} despesas exportadas`,
+    });
   }, [filtered]);
 
   const categoryBadgeVariant = (cat: string) => {

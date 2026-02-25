@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +12,7 @@ import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment, type
 import { useExpenses } from "@/hooks/useExpenses";
 import { Plus, Search, ArrowUpDown, CalendarDays, Download } from "lucide-react";
 import { toast } from "sonner";
+import { exportToCSV } from "@/lib/exportCsv";
 import { formatCurrency } from "@/lib/formatters";
 import { FinancialSummaryCards } from "@/components/financial/FinancialSummaryCards";
 import { FinancialCharts } from "@/components/financial/FinancialCharts";
@@ -119,6 +121,11 @@ export default function Financial() {
   }, [deleteId, payments]);
 
   const openNew = () => { setEditingId(null); setForm({ method: "PIX", date: new Date().toISOString().split("T")[0] }); setDialogOpen(true); };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "1") { openNew(); setSearchParams({}, { replace: true }); }
+  }, [searchParams]);
   const openEdit = (p: DbPayment) => {
     setEditingId(p.id);
     setForm({ budgetId: p.budget_id || "", budgetNumber: p.budget_number, clientName: p.client_name, amount: Number(p.amount), method: p.method, date: p.date, notes: p.notes || undefined });
@@ -142,18 +149,15 @@ export default function Financial() {
   const clearFilters = () => { setSearch(""); setMethodFilter("all"); setPeriodFilter("all"); resetPage(); };
 
   const exportPaymentsCSV = useCallback(() => {
-    const headers = ["Data", "Cliente", "Orçamento", "Valor", "Método", "Observações"];
-    const rows = filteredPayments.map(p => [
-      p.date, p.client_name, p.budget_number, String(p.amount),
-      p.method, p.notes || "",
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `pagamentos_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-    toast.success(`${filteredPayments.length} pagamentos exportados`);
+    exportToCSV({
+      headers: ["Data", "Cliente", "Orçamento", "Valor", "Método", "Observações"],
+      rows: filteredPayments.map(p => [
+        p.date, p.client_name, p.budget_number, String(p.amount),
+        p.method, p.notes || "",
+      ]),
+      filename: "pagamentos",
+      successMessage: `${filteredPayments.length} pagamentos exportados`,
+    });
   }, [filteredPayments]);
 
   if (lb || lp) {

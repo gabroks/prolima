@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { formatDate, formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
+import { exportToCSV } from "@/lib/exportCsv";
 
 type SortKey = "name" | "date-desc" | "date-asc" | "city";
 const PAGE_SIZE = 15;
@@ -100,6 +101,12 @@ export default function Clients() {
   const totalBudgetValue = useMemo(() => budgets.reduce((s, b) => s + Number(b.total), 0), [budgets]);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+
+  // Handle ?new=1 from CommandPalette
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "1") { openNew(); setSearchParams({}, { replace: true }); }
+  }, [searchParams]);
   const openEdit = (client: DbClient, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(client.id);
@@ -147,18 +154,15 @@ export default function Clients() {
   };
 
   const exportCSV = useCallback(() => {
-    const headers = ["Nome", "Tipo", "Documento", "Telefone", "Email", "Cidade", "Bairro", "Status"];
-    const rows = filtered.map(c => [
-      c.name, c.person_type === "fisica" ? "PF" : "PJ", c.document, c.phone,
-      c.email || "", c.city || "", c.neighborhood || "", c.status === "active" ? "Ativo" : "Inativo",
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `clientes_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} clientes exportados`);
+    exportToCSV({
+      headers: ["Nome", "Tipo", "Documento", "Telefone", "Email", "Cidade", "Bairro", "Status"],
+      rows: filtered.map(c => [
+        c.name, c.person_type === "fisica" ? "PF" : "PJ", c.document, c.phone,
+        c.email || "", c.city || "", c.neighborhood || "", c.status === "active" ? "Ativo" : "Inativo",
+      ]),
+      filename: "clientes",
+      successMessage: `${filtered.length} clientes exportados`,
+    });
   }, [filtered]);
 
   // Delete dialog: find client info
