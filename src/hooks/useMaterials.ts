@@ -50,7 +50,7 @@ export function useCreateMaterial() {
       if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("materials").select("id", { count: "exact", head: true }),
-        supabase.from("system_limits").select("max_materials").limit(1).single(),
+        supabase.from("system_limits").select("max_materials").limit(1).maybeSingle(),
       ]);
       if (limits && count !== null && count >= limits.max_materials) {
         throw new Error(`Limite de materiais atingido (${count}/${limits.max_materials}). Contate o administrador.`);

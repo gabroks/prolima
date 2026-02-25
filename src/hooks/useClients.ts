@@ -62,7 +62,7 @@ export function useCreateClient() {
       if (!user) throw new Error("Usuário não autenticado");
       const [{ count }, { data: limits }] = await Promise.all([
         supabase.from("clients").select("id", { count: "exact", head: true }),
-        supabase.from("system_limits").select("max_clients").limit(1).single(),
+        supabase.from("system_limits").select("max_clients").limit(1).maybeSingle(),
       ]);
       if (limits && count !== null && count >= limits.max_clients) {
         throw new Error(`Limite de clientes atingido (${count}/${limits.max_clients}). Contate o administrador.`);
