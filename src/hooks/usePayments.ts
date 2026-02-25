@@ -48,7 +48,7 @@ export function useCreatePayment() {
       return data;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["payments"] }); toast.success("Pagamento registrado!"); },
-    onError: () => toast.error("Erro ao registrar pagamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao registrar pagamento"),
   });
 }
 
@@ -71,7 +71,7 @@ export function useUpdatePayment() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["payments"] }); toast.success("Pagamento atualizado!"); },
-    onError: () => toast.error("Erro ao atualizar pagamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao atualizar pagamento"),
   });
 }
 
@@ -83,6 +83,6 @@ export function useDeletePayment() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["payments"] }); toast.success("Pagamento removido!"); },
-    onError: () => toast.error("Erro ao remover pagamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover pagamento"),
   });
 }

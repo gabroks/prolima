@@ -101,7 +101,7 @@ export function useUpdateClient() {
       qc.invalidateQueries({ queryKey: ["clients"] });
       toast.success("Cliente atualizado!");
     },
-    onError: () => toast.error("Erro ao atualizar cliente"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao atualizar cliente"),
   });
 }
 
@@ -116,7 +116,7 @@ export function useDeleteClient() {
       qc.invalidateQueries({ queryKey: ["clients"] });
       toast.success("Cliente removido!");
     },
-    onError: () => toast.error("Erro ao remover cliente"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover cliente"),
   });
 }
 
@@ -136,6 +136,6 @@ export function useToggleClientStatus() {
       qc.invalidateQueries({ queryKey: ["clients"] });
       toast.success(`Cliente ${newStatus === "active" ? "ativado" : "desativado"}`);
     },
-    onError: () => toast.error("Erro ao alterar status"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao alterar status"),
   });
 }

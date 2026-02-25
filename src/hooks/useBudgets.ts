@@ -190,7 +190,7 @@ export function useUpdateBudget() {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       toast.success("Orçamento atualizado!");
     },
-    onError: () => toast.error("Erro ao atualizar orçamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao atualizar orçamento"),
   });
 }
 
@@ -220,7 +220,7 @@ export function useUpdateBudgetStatus() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
     },
-    onError: () => toast.error("Erro ao alterar status"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao alterar status"),
   });
 }
 
@@ -239,7 +239,7 @@ export function useDeleteBudget() {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       toast.success("Orçamento excluído!");
     },
-    onError: () => toast.error("Erro ao excluir orçamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao excluir orçamento"),
   });
 }
 
@@ -297,6 +297,6 @@ export function useDuplicateBudget() {
       qc.invalidateQueries({ queryKey: ["budgets"] });
       toast.success("Orçamento duplicado como rascunho!");
     },
-    onError: () => toast.error("Erro ao duplicar orçamento"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao duplicar orçamento"),
   });
 }
