@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -82,7 +83,7 @@ export function MaterialFormDialog({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={onSave} disabled={isPending}>
-            {isEditing ? "Atualizar" : "Salvar"}
+            {isPending ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{isEditing ? "Atualizando…" : "Salvando…"}</> : isEditing ? "Atualizar" : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>

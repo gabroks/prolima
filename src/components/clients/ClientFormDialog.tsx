@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,7 +86,7 @@ export function ClientFormDialog({ open, onOpenChange, form, onFormChange, onSav
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={onSave} disabled={isSaving}>
-            {isEditing ? "Atualizar" : "Salvar"}
+            {isSaving ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{isEditing ? "Atualizando…" : "Salvando…"}</> : isEditing ? "Atualizar" : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>

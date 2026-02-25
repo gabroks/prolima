@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 import type { PaymentForm } from "@/hooks/usePayments";
 import { formatCurrency } from "@/lib/formatters";
 import type { BudgetWithItems } from "@/hooks/useBudgets";
@@ -129,7 +130,7 @@ export function PaymentFormDialog({ open, onOpenChange, form, setForm, onSave, e
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={onSave} disabled={isSaving}>{editingId ? "Atualizar" : "Salvar"}</Button>
+          <Button onClick={onSave} disabled={isSaving}>{isSaving ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{editingId ? "Atualizando…" : "Salvando…"}</> : editingId ? "Atualizar" : "Salvar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
