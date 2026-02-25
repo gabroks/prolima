@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBudgets } from "@/hooks/useBudgets";
 import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment, type PaymentForm, type DbPayment } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
-import { Plus, Search, ArrowUpDown, CalendarDays } from "lucide-react";
+import { Plus, Search, ArrowUpDown, CalendarDays, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
 import { FinancialSummaryCards } from "@/components/financial/FinancialSummaryCards";
@@ -141,6 +141,21 @@ export default function Financial() {
   const handleDelete = () => { if (!deleteId) return; deletePaymentMut.mutate(deleteId, { onSuccess: () => setDeleteId(null) }); };
   const clearFilters = () => { setSearch(""); setMethodFilter("all"); setPeriodFilter("all"); resetPage(); };
 
+  const exportPaymentsCSV = useCallback(() => {
+    const headers = ["Data", "Cliente", "Orçamento", "Valor", "Método", "Observações"];
+    const rows = filteredPayments.map(p => [
+      p.date, p.client_name, p.budget_number, String(p.amount),
+      p.method, p.notes || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `pagamentos_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filteredPayments.length} pagamentos exportados`);
+  }, [filteredPayments]);
+
   if (lb || lp) {
     return (
       <div className="space-y-6">
@@ -174,9 +189,17 @@ export default function Financial() {
             )}
           </p>
         </div>
-        <Button onClick={openNew} className="shadow-md shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" />Registrar Pagamento
-        </Button>
+        <div className="flex items-center gap-2">
+          {filteredPayments.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportPaymentsCSV}>
+              <Download className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
+          )}
+          <Button onClick={openNew} className="shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" />Registrar Pagamento
+          </Button>
+        </div>
       </div>
 
       <FinancialSummaryCards totalApproved={totalApproved} totalReceived={totalReceived} balance={balance} profit={profit} profitMargin={profitMargin} monthComparison={monthComparison} />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { useBudgets } from "@/hooks/useBudgets";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { usePayments } from "@/hooks/usePayments";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, type ExpenseForm, type DbExpense } from "@/hooks/useExpenses";
-import { Plus, Search, Pencil, Trash2, Receipt, ArrowUpDown, CalendarDays } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Receipt, ArrowUpDown, CalendarDays, Download } from "lucide-react";
 import { formatCurrency, formatDate, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 import { ExpenseSummaryCards } from "@/components/expenses/ExpenseSummaryCards";
@@ -167,6 +167,21 @@ export default function Expenses() {
 
   const clearFilters = () => { setSearch(""); setCategoryFilter("all"); setSupplierFilter("all"); setBudgetFilter("all"); setPeriodFilter("all"); resetPage(); };
 
+  const exportCSV = useCallback(() => {
+    const headers = ["Data", "Descrição", "Categoria", "Fornecedor", "Orçamento", "Valor", "Observações"];
+    const rows = filtered.map(e => [
+      e.date, e.description, e.category, e.supplier_name || "",
+      e.budget_number || "", String(e.amount), e.notes || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `despesas_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} despesas exportadas`);
+  }, [filtered]);
+
   const categoryBadgeVariant = (cat: string) => {
     switch (cat) {
       case "Material": return "default" as const;
@@ -209,9 +224,17 @@ export default function Expenses() {
             )}
           </p>
         </div>
-        <Button onClick={openNew} className="shadow-md shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" />Nova Despesa
-        </Button>
+        <div className="flex items-center gap-2">
+          {filtered.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
+          )}
+          <Button onClick={openNew} className="shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" />Nova Despesa
+          </Button>
+        </div>
       </div>
 
       <ExpenseSummaryCards totalEntradas={totalEntradas} totalDespesas={totalDespesas} saldo={saldo} avgExpense={avgExpense} monthComparison={monthComparison} />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial, 
 import { useBudgets } from "@/hooks/useBudgets";
 import { QuotaButton } from "@/components/QuotaButton";
 import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
-import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, DollarSign, Layers, ClipboardList, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Package, ArrowUpDown, DollarSign, Layers, ClipboardList, TrendingUp, TrendingDown, Download } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
 
@@ -128,6 +128,21 @@ export default function Materials() {
     deleteMaterial.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
 
+  const exportCSV = useCallback(() => {
+    const headers = ["Nome", "Categoria", "Unidade Cobrança", "Unidade Medida", "Preço Base", "Observações"];
+    const rows = filtered.map(m => [
+      m.name, m.category || "", m.charge_unit, m.measure_unit,
+      String(m.base_price), m.notes || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `materiais_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} materiais exportados`);
+  }, [filtered]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -163,9 +178,17 @@ export default function Materials() {
             )}
           </p>
         </div>
-        <QuotaButton resource="materials" onClick={openNew} className="shadow-md shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" />Novo Material
-        </QuotaButton>
+        <div className="flex items-center gap-2">
+          {filtered.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
+          )}
+          <QuotaButton resource="materials" onClick={openNew} className="shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" />Novo Material
+          </QuotaButton>
+        </div>
       </div>
 
       {/* Stats */}
