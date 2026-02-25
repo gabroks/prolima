@@ -1,25 +1,22 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useBudgets } from "@/hooks/useBudgets";
 import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment, type PaymentForm, type DbPayment } from "@/hooks/usePayments";
 import { useExpenses } from "@/hooks/useExpenses";
-import { Plus, Search, Pencil, Trash2, CreditCard, ArrowUpDown, CheckCircle2, CalendarDays } from "lucide-react";
+import { Plus, Search, ArrowUpDown, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, getInitials } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import { FinancialSummaryCards } from "@/components/financial/FinancialSummaryCards";
 import { FinancialCharts } from "@/components/financial/FinancialCharts";
 import { PaymentFormDialog } from "@/components/financial/PaymentFormDialog";
+import { PaymentsTable } from "@/components/financial/PaymentsTable";
+import { BudgetsFinancialTable } from "@/components/financial/BudgetsFinancialTable";
 
 const PAYMENT_METHODS = ["PIX", "Dinheiro", "Cartão", "Boleto", "Transferência"];
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
@@ -34,7 +31,6 @@ export default function Financial() {
   const deletePaymentMut = useDeletePayment();
 
   const approvedBudgets = budgets.filter(b => b.status === "approved");
-  const allBudgets = budgets;
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("all");
@@ -53,7 +49,6 @@ export default function Financial() {
   const receivedPct = totalApproved > 0 ? Math.round((totalReceived / totalApproved) * 100) : 0;
   const profitMargin = totalReceived > 0 ? ((profit / totalReceived) * 100).toFixed(1) : "0.0";
 
-  // Month-over-month
   const monthComparison = useMemo(() => {
     const now = new Date();
     const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -116,13 +111,7 @@ export default function Financial() {
   const pagedPayments = useMemo(() => filteredPayments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filteredPayments, page]);
   const resetPage = () => setPage(0);
   const filteredTotal = filteredPayments.reduce((s, p) => s + Number(p.amount), 0);
-
   const activeFiltersCount = [methodFilter !== "all", periodFilter !== "all", !!search].filter(Boolean).length;
-
-  const filteredBudgets = useMemo(() => {
-    const q = search.toLowerCase();
-    return allBudgets.filter(b => !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q));
-  }, [search, allBudgets]);
 
   const paymentToDelete = useMemo(() => {
     if (!deleteId) return null;
@@ -150,12 +139,7 @@ export default function Financial() {
   };
 
   const handleDelete = () => { if (!deleteId) return; deletePaymentMut.mutate(deleteId, { onSuccess: () => setDeleteId(null) }); };
-
   const clearFilters = () => { setSearch(""); setMethodFilter("all"); setPeriodFilter("all"); resetPage(); };
-
-  const methodBadgeVariant = (m: string) => {
-    switch (m) { case "PIX": return "default" as const; case "Cartão": return "outline" as const; default: return "secondary" as const; }
-  };
 
   if (lb || lp) {
     return (
@@ -234,138 +218,25 @@ export default function Financial() {
       <Tabs defaultValue="payments" className="space-y-4">
         <TabsList>
           <TabsTrigger value="payments">Pagamentos ({payments.length})</TabsTrigger>
-          <TabsTrigger value="budgets">Orçamentos ({allBudgets.length})</TabsTrigger>
+          <TabsTrigger value="budgets">Orçamentos ({budgets.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payments">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Orçamento</TableHead>
-                    <TableHead className="hidden md:table-cell">Cliente</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead className="hidden sm:table-cell">Método</TableHead>
-                    <TableHead className="hidden md:table-cell">Data</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                        <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                        <p>{activeFiltersCount > 0 ? "Nenhum pagamento encontrado" : "Nenhum pagamento registrado"}</p>
-                        {activeFiltersCount === 0 && (
-                          <Button variant="outline" size="sm" className="mt-3" onClick={openNew}>
-                            <Plus className="h-3.5 w-3.5 mr-1.5" />Registrar primeiro pagamento
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ) : pagedPayments.map(p => (
-                    <TableRow key={p.id} className="group">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                              {getInitials(p.client_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium font-mono text-xs">{p.budget_number}</p>
-                            <p className="text-xs text-muted-foreground md:hidden">{p.client_name}</p>
-                            {p.notes && <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">{p.notes}</p>}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{p.client_name}</TableCell>
-                      <TableCell className="tabular-nums font-semibold text-primary">{formatCurrency(Number(p.amount))}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant={methodBadgeVariant(p.method)}>{p.method}</Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm">{formatDate(p.date)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <PaymentsTable
+            payments={pagedPayments}
+            activeFiltersCount={activeFiltersCount}
+            onOpenNew={openNew}
+            onEdit={openEdit}
+            onDelete={setDeleteId}
+          />
         </TabsContent>
 
         <TabsContent value="budgets">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="hidden sm:table-cell">Situação</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead className="hidden sm:table-cell">Recebido</TableHead>
-                    <TableHead className="hidden sm:table-cell">Progresso</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBudgets.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                        Nenhum orçamento encontrado
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredBudgets.map(b => {
-                    const received = payments.filter(p => p.budget_id === b.id).reduce((s, p) => s + Number(p.amount), 0);
-                    const pending = Number(b.total) - received;
-                    const pct = Number(b.total) > 0 ? Math.round((received / Number(b.total)) * 100) : 0;
-                    return (
-                      <TableRow key={b.id}>
-                        <TableCell className="font-medium font-mono text-xs">{b.number}</TableCell>
-                        <TableCell>{b.client_name}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <Badge variant={b.status === "approved" ? "default" : b.status === "draft" ? "secondary" : b.status === "issued" ? "outline" : "destructive"} className="text-xs">
-                            {b.status === "approved" ? "Aprovado" : b.status === "draft" ? "Rascunho" : b.status === "issued" ? "Emitido" : "Rejeitado"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="tabular-nums font-medium">{formatCurrency(Number(b.total))}</TableCell>
-                        <TableCell className="hidden sm:table-cell tabular-nums text-primary">{formatCurrency(received)}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <div className="flex items-center gap-2 min-w-[100px]">
-                            <Progress value={pct} className="h-2 flex-1" />
-                            <span className="text-xs tabular-nums font-medium w-8 text-right">{pct}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {pending <= 0 ? (
-                            <Badge variant="default" className="text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />Quitado
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">{formatCurrency(pending)}</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <BudgetsFinancialTable budgets={budgets} payments={payments} search={search} />
         </TabsContent>
       </Tabs>
 
+      {/* Payments pagination (only visible on payments tab) */}
       <PaginationFooter
         page={page} totalPages={totalPages} totalItems={filteredPayments.length} pageSize={PAGE_SIZE}
         onPageChange={setPage} label="pagamentos"
