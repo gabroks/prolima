@@ -84,7 +84,7 @@ export function useUpdateSupplier() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor atualizado!"); },
-    onError: () => toast.error("Erro ao atualizar fornecedor"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao atualizar fornecedor"),
   });
 }
 
@@ -96,7 +96,7 @@ export function useDeleteSupplier() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor removido!"); },
-    onError: () => toast.error("Erro ao remover fornecedor"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover fornecedor"),
   });
 }
 
@@ -113,6 +113,6 @@ export function useToggleSupplierActive() {
       qc.invalidateQueries({ queryKey: ["suppliers"] });
       toast.success(`Fornecedor ${newActive ? "ativado" : "desativado"}`);
     },
-    onError: () => toast.error("Erro ao alterar status"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao alterar status"),
   });
 }

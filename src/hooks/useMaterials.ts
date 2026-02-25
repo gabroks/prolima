@@ -89,7 +89,7 @@ export function useUpdateMaterial() {
       qc.invalidateQueries({ queryKey: ["materials"] });
       toast.success("Material atualizado!");
     },
-    onError: () => toast.error("Erro ao atualizar material"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao atualizar material"),
   });
 }
 
@@ -104,6 +104,6 @@ export function useDeleteMaterial() {
       qc.invalidateQueries({ queryKey: ["materials"] });
       toast.success("Material removido!");
     },
-    onError: () => toast.error("Erro ao remover material"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover material"),
   });
 }

@@ -52,7 +52,7 @@ export function useCreateExpense() {
       return data;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); toast.success("Despesa registrada!"); },
-    onError: () => toast.error("Erro ao registrar despesa"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao registrar despesa"),
   });
 }
 
@@ -77,7 +77,7 @@ export function useUpdateExpense() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); toast.success("Despesa atualizada!"); },
-    onError: () => toast.error("Erro ao atualizar despesa"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao atualizar despesa"),
   });
 }
 
@@ -89,6 +89,6 @@ export function useDeleteExpense() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); toast.success("Despesa removida!"); },
-    onError: () => toast.error("Erro ao remover despesa"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao remover despesa"),
   });
 }
