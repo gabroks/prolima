@@ -15,6 +15,7 @@ import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { FilterBar } from "@/components/shared/FilterBar";
+import { PageLoading, PageError } from "@/components/shared/PageStates";
 import { Plus, Search, Pencil, Trash2, Truck, CheckCircle, Phone, Mail, MapPin, ArrowUpDown, DollarSign, MessageCircle, Receipt, Download } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -141,26 +142,8 @@ export default function Suppliers() {
     });
   }, [filtered]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}</div>
-        <Skeleton className="h-64" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Truck className="h-10 w-10 text-destructive mb-4 opacity-50" />
-        <h3 className="text-lg font-semibold">Erro ao carregar fornecedores</h3>
-        <p className="text-sm text-muted-foreground mt-1">Verifique sua conexão e tente novamente.</p>
-        <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button>
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoading />;
+  if (isError) return <PageError icon={Truck} title="Erro ao carregar fornecedores" />;
 
   const deleteDescription = (
     <>
