@@ -74,6 +74,7 @@ export default function Budgets() {
     }
   };
 
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let result = budgets.filter((b) => {
       const matchSearch = !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q) || b.service_description?.toLowerCase().includes(q) || b.general_notes?.toLowerCase().includes(q) || b.payment_terms?.toLowerCase().includes(q);
