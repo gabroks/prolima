@@ -27,8 +27,30 @@ function getGreeting(): string {
 }
 
 export default function Dashboard() {
+  const [period, setPeriod] = useState<DashboardPeriod>("month");
   const data = useDashboardData();
   const queryClient = useQueryClient();
+
+  const dateRange = useMemo(() => getDateRangeForPeriod(period), [period]);
+
+  const filteredPayments = useMemo(() => {
+    if (!dateRange.from) return data.payments;
+    return data.payments.filter(p => {
+      const d = new Date(p.date);
+      return d >= dateRange.from! && d <= dateRange.to;
+    });
+  }, [data.payments, dateRange]);
+
+  const filteredExpenses = useMemo(() => {
+    if (!dateRange.from) return data.expenses;
+    return data.expenses.filter(e => {
+      const d = new Date(e.date);
+      return d >= dateRange.from! && d <= dateRange.to;
+    });
+  }, [data.expenses, dateRange]);
+
+  const filteredReceitas = filteredPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const filteredDespesas = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
   const handleRetry = () => {
     queryClient.invalidateQueries({ queryKey: ["clients"] });
