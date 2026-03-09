@@ -137,7 +137,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Client info box (gold border) ───
   const clientBoxH = 16;
-  drawSectionTitle(doc, "INFORMAÇÕES DO CLIENTE", margin, y, contentWidth);
+  drawSectionTitle(doc, "INFORMAÇÕES DO CLIENTE", margin, y, contentWidth, PRIMARY);
   y += 7;
   drawSectionBox(doc, margin, y, contentWidth, clientBoxH, GOLD);
   doc.setFont("helvetica", "bold");
