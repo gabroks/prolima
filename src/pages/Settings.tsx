@@ -94,6 +94,8 @@ export default function SettingsPage() {
         state: settings.state,
         cep: settings.cep,
         theme_color: settings.themeColor,
+        brand_name: settings.brandName,
+        brand_subtitle: settings.brandSubtitle,
         logo: settings.logo || null,
         pix_qr_code: settings.pixQrCode || null,
         doc_show_logo: settings.docShowLogo,
