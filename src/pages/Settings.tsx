@@ -15,10 +15,11 @@ import { useCompanySettings, useUpdateCompanySettings } from "@/hooks/useCompany
 import { useIsAdmin } from "@/hooks/useAdmin";
 import {
   Upload, Building2, Palette, QrCode, Save, Check,
-  FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
+  FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin, Type,
 } from "lucide-react";
 import { FileUpload } from "@/components/settings/FileUpload";
 import { AdminClientsList } from "@/components/settings/AdminClientsList";
+import { colorOptions, applyThemeToDOM } from "@/hooks/useBranding";
 
 
 const colorOptions = [
