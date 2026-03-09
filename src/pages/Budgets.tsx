@@ -59,7 +59,21 @@ export default function Budgets() {
     }
   };
 
-  const filtered = useMemo(() => {
+  const companyName = companySettings?.nome_fantasia || companySettings?.razao_social || "";
+
+  const handleWhatsApp = (budget: BudgetWithItems) => {
+    openWhatsAppShare(budget, companyName);
+  };
+
+  const handleCopyText = async (budget: BudgetWithItems) => {
+    try {
+      await copyBudgetText(budget, companyName);
+      toast.success("Texto do orçamento copiado!");
+    } catch {
+      toast.error("Erro ao copiar texto");
+    }
+  };
+
     const q = search.toLowerCase();
     let result = budgets.filter((b) => {
       const matchSearch = !q || b.client_name.toLowerCase().includes(q) || b.number.toLowerCase().includes(q) || b.service_description?.toLowerCase().includes(q) || b.general_notes?.toLowerCase().includes(q) || b.payment_terms?.toLowerCase().includes(q);
