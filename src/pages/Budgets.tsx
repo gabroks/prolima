@@ -34,6 +34,7 @@ export default function Budgets() {
   const { data: budgets = [], isLoading } = useBudgets();
   const { data: budgetCount = 0 } = useBudgetCount();
   const { data: payments = [] } = usePayments();
+  const { data: clients = [] } = useClients();
   const updateStatus = useUpdateBudgetStatus();
   const deleteBudget = useDeleteBudget();
   const duplicateBudget = useDuplicateBudget();
