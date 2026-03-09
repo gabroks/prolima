@@ -341,6 +341,18 @@ export default function NewBudget() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Inline material creation dialog */}
+      <MaterialFormDialog
+        open={materialDialogOpen}
+        onOpenChange={(open) => { if (!open) setMaterialDialogOpen(false); }}
+        form={materialForm}
+        onFormChange={setMaterialForm}
+        onSave={handleSaveMaterial}
+        isEditing={false}
+        isPending={createMaterial.isPending}
+        categories={materialCategories}
+      />
     </div>
   );
 }
