@@ -165,7 +165,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     doc.setTextColor(...DARK);
     const descLines = doc.splitTextToSize(budget.service_description, contentWidth);
     doc.text(descLines, margin, y);
-    y += descLines.length * 3.5 + 4;
+    y += descLines.length * 3.5 + 8;
   }
 
   // ─── Materials table ───
