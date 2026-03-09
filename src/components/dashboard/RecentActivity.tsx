@@ -73,7 +73,7 @@ export function RecentActivity({ payments, expenses, budgets }: RecentActivityPr
               <WidgetEmpty icon={CalendarClock} title="Nenhuma atividade recente" subtitle="Registre pagamentos e despesas para acompanhar aqui" />
             ) : (
               activityFeed.map((item) => (
-                <div key={item.id} className="flex items-start gap-3 cursor-pointer hover:bg-muted/40 -mx-2 px-2 py-1.5 rounded transition-colors" onClick={() => navigate(item.href)}>
+                <div key={item.id} role="button" tabIndex={0} className="flex items-start gap-3 cursor-pointer hover:bg-muted/40 -mx-2 px-2 py-1.5 rounded transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => navigate(item.href)} onKeyDown={(e) => e.key === "Enter" && navigate(item.href)}>
                   <div className={`p-1.5 rounded-md ${item.iconBg} shrink-0 mt-0.5`}>
                     <item.icon className="h-3.5 w-3.5" />
                   </div>
