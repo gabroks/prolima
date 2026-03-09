@@ -81,7 +81,7 @@ export function AppLayout() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <button onClick={() => navigate("/")} className="text-xs text-muted-foreground font-medium hover:text-foreground transition-colors">
-                    Pro Orçamento
+                    {brandName}
                   </button>
                 </BreadcrumbItem>
                 {parent && (
