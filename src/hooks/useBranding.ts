@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 const colorOptions = [
@@ -34,12 +35,36 @@ export function applyThemeToDOM(colorValue: string) {
   localStorage.setItem("app-theme-name", color.name);
 }
 
+/** Broadcast brand name/subtitle changes for real-time sidebar updates */
+export function updateBrandingPreview(brandName: string, brandSubtitle: string) {
+  window.dispatchEvent(new CustomEvent("branding-preview", { detail: { brandName, brandSubtitle } }));
+}
+
 export function useBranding() {
   const { data: settings } = useCompanySettings();
 
+  const dbBrandName = (settings as any)?.brand_name || "Pro Orçamento";
+  const dbBrandSubtitle = (settings as any)?.brand_subtitle || "Gestão inteligente";
+
+  const [preview, setPreview] = useState<{ brandName: string; brandSubtitle: string } | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setPreview({ brandName: detail.brandName, brandSubtitle: detail.brandSubtitle });
+    };
+    window.addEventListener("branding-preview", handler);
+    return () => window.removeEventListener("branding-preview", handler);
+  }, []);
+
+  // Reset preview when DB settings change (after save)
+  useEffect(() => {
+    setPreview(null);
+  }, [dbBrandName, dbBrandSubtitle]);
+
   return {
-    brandName: (settings as any)?.brand_name || "Pro Orçamento",
-    brandSubtitle: (settings as any)?.brand_subtitle || "Gestão inteligente",
+    brandName: preview?.brandName ?? dbBrandName,
+    brandSubtitle: preview?.brandSubtitle ?? dbBrandSubtitle,
     logo: settings?.logo || null,
     themeColor: settings?.theme_color || "green",
   };
