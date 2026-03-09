@@ -303,7 +303,12 @@ export default function NewBudget() {
 
       <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{editingItemId ? "Editar Item" : "Adicionar Item"}</DialogTitle><DialogDescription>Selecione o material e preencha as dimensões.</DialogDescription></DialogHeader>
         <div className="grid gap-4">
-          <div><Label>Material *</Label><Select value={itemForm.materialId} onValueChange={selectMaterial}><SelectTrigger><SelectValue placeholder="Selecione um material" /></SelectTrigger><SelectContent>{materials.map(m => <SelectItem key={m.id} value={m.id}>{m.name} — {formatCurrency(Number(m.base_price))}/{m.charge_unit}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label>Material *</Label>
+            <div className="flex gap-2">
+              <div className="flex-1"><Select value={itemForm.materialId} onValueChange={selectMaterial}><SelectTrigger><SelectValue placeholder="Selecione um material" /></SelectTrigger><SelectContent>{materials.map(m => <SelectItem key={m.id} value={m.id}>{m.name} — {formatCurrency(Number(m.base_price))}/{m.charge_unit}</SelectItem>)}</SelectContent></Select></div>
+              <Button type="button" variant="outline" size="icon" title="Cadastrar novo material" onClick={() => setMaterialDialogOpen(true)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div><Label>Unidade</Label><Input value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} /></div>
             <div><Label>Quantidade *</Label><Input type="number" min="1" value={itemForm.qty || ""} onChange={(e) => setItemForm({ ...itemForm, qty: parseInt(e.target.value) || 1 })} /></div>
