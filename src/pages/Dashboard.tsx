@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck, AlertCircle, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
@@ -12,6 +13,7 @@ import { RecentBudgets } from "@/components/dashboard/RecentBudgets";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ExpiringBudgets } from "@/components/dashboard/ExpiringBudgets";
 import { WelcomeOnboarding } from "@/components/dashboard/WelcomeOnboarding";
+import { DashboardPeriodFilter, type DashboardPeriod, getDateRangeForPeriod } from "@/components/dashboard/DashboardPeriodFilter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
