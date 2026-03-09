@@ -105,7 +105,7 @@ export default function Dashboard() {
     { title: "Orçamentos", value: data.budgets.length, subtitle: `${data.approvedBudgets.length} aprovado${data.approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: data.budgetDiff !== 0 ? `${data.budgetDiff > 0 ? "+" : ""}${data.budgetDiff} este mês` : null, trendUp: data.budgetDiff >= 0, href: "/orcamentos" },
     { title: "Materiais", value: data.materials.length, subtitle: `${data.materialCategories} categoria${data.materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
     { title: "Fornecedores", value: data.suppliers.length, subtitle: `${data.activeSuppliers} ativo${data.activeSuppliers !== 1 ? "s" : ""}`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
-    { title: "Saldo do Mês", value: formatCurrency(data.monthSaldo), subtitle: data.monthSaldo >= 0 ? "Positivo" : "Negativo", icon: data.monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: data.saldoTrendLabel, trendUp: data.saldoDiff >= 0, href: "/financeiro", negative: data.monthSaldo < 0 },
+    { title: "Saldo do Período", value: formatCurrency(filteredReceitas - filteredDespesas), subtitle: (filteredReceitas - filteredDespesas) >= 0 ? "Positivo" : "Negativo", icon: (filteredReceitas - filteredDespesas) >= 0 ? TrendingUp : TrendingDown, trend: data.saldoTrendLabel, trendUp: data.saldoDiff >= 0, href: "/financeiro", negative: (filteredReceitas - filteredDespesas) < 0 },
   ];
 
   return (
