@@ -51,6 +51,33 @@ export default function NewBudget() {
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
   const budgetQuota = useQuotaCheck("budgets");
+  const createMaterial = useCreateMaterial();
+
+  // Inline material creation state
+  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  const emptyMaterialForm: MaterialForm = { name: "", category: "", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 0, notes: "" };
+  const [materialForm, setMaterialForm] = useState<MaterialForm>(emptyMaterialForm);
+  const materialCategories = useMemo(() => [...new Set(materials.map(m => m.category))].sort(), [materials]);
+
+  const handleSaveMaterial = () => {
+    if (!materialForm.name) { toast.error("Informe o nome do material"); return; }
+    if (!materialForm.basePrice) { toast.error("Informe o preço base"); return; }
+    createMaterial.mutate(materialForm, {
+      onSuccess: (newMaterial) => {
+        setMaterialDialogOpen(false);
+        setMaterialForm(emptyMaterialForm);
+        // Auto-select the newly created material in the item form
+        if (newMaterial) {
+          setItemForm(prev => ({
+            ...prev,
+            materialId: newMaterial.id,
+            unit: newMaterial.charge_unit,
+            unitPrice: Number(newMaterial.base_price),
+          }));
+        }
+      },
+    });
+  };
 
   const budgetNumber = useMemo(() => {
     if (isEditMode && existingBudget) return existingBudget.number;
