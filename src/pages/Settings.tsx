@@ -46,6 +46,8 @@ export default function SettingsPage() {
     state: dbSettings.state,
     cep: dbSettings.cep,
     themeColor: dbSettings.theme_color,
+    brandName: (dbSettings as any).brand_name || "Pro Orçamento",
+    brandSubtitle: (dbSettings as any).brand_subtitle || "Gestão inteligente",
     logo: dbSettings.logo || "",
     pixQrCode: dbSettings.pix_qr_code || "",
     docShowLogo: dbSettings.doc_show_logo,
