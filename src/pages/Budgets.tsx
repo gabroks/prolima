@@ -16,13 +16,14 @@ import { usePayments } from "@/hooks/usePayments";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
   ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2, Download, Pencil,
-  ArrowUpRight, ArrowDownRight, Loader2,
+  ArrowUpRight, ArrowDownRight, Loader2, MessageCircle, ClipboardCopy,
 } from "lucide-react";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { downloadBudgetPdf } from "@/lib/generateBudgetPdf";
+import { openWhatsAppShare, copyBudgetText } from "@/lib/shareBudget";
 
 type SortKey = "date-desc" | "date-asc" | "value-desc" | "value-asc" | "client" | "number";
 const PAGE_SIZE = 15;
