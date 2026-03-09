@@ -19,8 +19,8 @@ export function useCompanySettings() {
 export function useUpdateCompanySettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: TablesUpdate<"company_settings"> }) => {
-      const { error } = await supabase.from("company_settings").update(data).eq("id", id);
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
+      const { error } = await supabase.from("company_settings").update(data as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
