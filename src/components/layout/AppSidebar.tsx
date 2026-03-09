@@ -104,6 +104,7 @@ export function AppSidebar() {
   const initials = getInitials(displayName);
   const { theme, setTheme } = useTheme();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
+  const { brandName, brandSubtitle } = useBranding();
 
   const handleLogout = async () => {
     await signOut();
