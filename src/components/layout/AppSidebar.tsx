@@ -20,6 +20,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { useBranding } from "@/hooks/useBranding";
 
 interface MenuItem {
   title: string;
