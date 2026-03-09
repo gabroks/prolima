@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClients } from "@/hooks/useClients";
-import { useMaterials } from "@/hooks/useMaterials";
+import { useMaterials, useCreateMaterial, type MaterialForm } from "@/hooks/useMaterials";
 import { useBudgetCount, useCreateBudget, useUpdateBudget, useBudgetById, type BudgetFormData } from "@/hooks/useBudgets";
 import { useQuotaCheck } from "@/hooks/useQuotaCheck";
+import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
 import { BudgetItem } from "@/types";
 import {
   Plus, Trash2, FileText, Package, ChevronRight, ChevronLeft,
@@ -50,6 +51,33 @@ export default function NewBudget() {
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
   const budgetQuota = useQuotaCheck("budgets");
+  const createMaterial = useCreateMaterial();
+
+  // Inline material creation state
+  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  const emptyMaterialForm: MaterialForm = { name: "", category: "", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 0, notes: "" };
+  const [materialForm, setMaterialForm] = useState<MaterialForm>(emptyMaterialForm);
+  const materialCategories = useMemo(() => [...new Set(materials.map(m => m.category))].sort(), [materials]);
+
+  const handleSaveMaterial = () => {
+    if (!materialForm.name) { toast.error("Informe o nome do material"); return; }
+    if (!materialForm.basePrice) { toast.error("Informe o preço base"); return; }
+    createMaterial.mutate(materialForm, {
+      onSuccess: (newMaterial) => {
+        setMaterialDialogOpen(false);
+        setMaterialForm(emptyMaterialForm);
+        // Auto-select the newly created material in the item form
+        if (newMaterial) {
+          setItemForm(prev => ({
+            ...prev,
+            materialId: newMaterial.id,
+            unit: newMaterial.charge_unit,
+            unitPrice: Number(newMaterial.base_price),
+          }));
+        }
+      },
+    });
+  };
 
   const budgetNumber = useMemo(() => {
     if (isEditMode && existingBudget) return existingBudget.number;
@@ -275,7 +303,12 @@ export default function NewBudget() {
 
       <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{editingItemId ? "Editar Item" : "Adicionar Item"}</DialogTitle><DialogDescription>Selecione o material e preencha as dimensões.</DialogDescription></DialogHeader>
         <div className="grid gap-4">
-          <div><Label>Material *</Label><Select value={itemForm.materialId} onValueChange={selectMaterial}><SelectTrigger><SelectValue placeholder="Selecione um material" /></SelectTrigger><SelectContent>{materials.map(m => <SelectItem key={m.id} value={m.id}>{m.name} — {formatCurrency(Number(m.base_price))}/{m.charge_unit}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label>Material *</Label>
+            <div className="flex gap-2">
+              <div className="flex-1"><Select value={itemForm.materialId} onValueChange={selectMaterial}><SelectTrigger><SelectValue placeholder="Selecione um material" /></SelectTrigger><SelectContent>{materials.map(m => <SelectItem key={m.id} value={m.id}>{m.name} — {formatCurrency(Number(m.base_price))}/{m.charge_unit}</SelectItem>)}</SelectContent></Select></div>
+              <Button type="button" variant="outline" size="icon" title="Cadastrar novo material" onClick={() => setMaterialDialogOpen(true)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div><Label>Unidade</Label><Input value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} /></div>
             <div><Label>Quantidade *</Label><Input type="number" min="1" value={itemForm.qty || ""} onChange={(e) => setItemForm({ ...itemForm, qty: parseInt(e.target.value) || 1 })} /></div>
@@ -308,6 +341,18 @@ export default function NewBudget() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Inline material creation dialog */}
+      <MaterialFormDialog
+        open={materialDialogOpen}
+        onOpenChange={(open) => { if (!open) setMaterialDialogOpen(false); }}
+        form={materialForm}
+        onFormChange={setMaterialForm}
+        onSave={handleSaveMaterial}
+        isEditing={false}
+        isPending={createMaterial.isPending}
+        categories={materialCategories}
+      />
     </div>
   );
 }
