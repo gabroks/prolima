@@ -256,7 +256,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Payment terms box ───
   if (budget.payment_terms) {
-    drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth);
+    drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, 10, [200, 200, 200]);
     doc.setFont("helvetica", "normal");
