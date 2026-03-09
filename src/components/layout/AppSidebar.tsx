@@ -122,8 +122,8 @@ export function AppSidebar() {
             <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-sidebar-foreground tracking-tight leading-tight">Pro Orçamento</h2>
-            <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-[0.15em] font-medium">Gestão inteligente</p>
+            <h2 className="text-base font-bold text-sidebar-foreground tracking-tight leading-tight truncate">{brandName}</h2>
+            <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-[0.15em] font-medium truncate">{brandSubtitle}</p>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
