@@ -4,7 +4,28 @@ import type { BudgetWithItems } from "@/hooks/useBudgets";
 import type { DbCompanySettings } from "@/hooks/useCompanySettings";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
-const PRIMARY: [number, number, number] = [45, 138, 94];
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  };
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+function getThemePrimary(): [number, number, number] {
+  const saved = localStorage.getItem("app-theme-primary");
+  if (saved) {
+    const parts = saved.match(/([\d.]+)/g);
+    if (parts && parts.length >= 3) {
+      return hslToRgb(Number(parts[0]), Number(parts[1]), Number(parts[2]));
+    }
+  }
+  return [45, 138, 94]; // default green
+}
+
 const DARK: [number, number, number] = [30, 30, 30];
 const GRAY: [number, number, number] = [120, 120, 120];
 const GOLD: [number, number, number] = [218, 165, 32];
