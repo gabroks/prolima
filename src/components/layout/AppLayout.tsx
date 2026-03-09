@@ -9,6 +9,7 @@ import { Bell, Shield, User } from "lucide-react";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { useBranding } from "@/hooks/useBranding";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -64,6 +65,7 @@ export function AppLayout() {
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const { data: isAdmin } = useIsAdmin();
   const { data: profile } = useCurrentProfile();
+  const { brandName } = useBranding();
   const displayName = profile?.name || profile?.email?.split("@")[0] || "";
 
   return (
@@ -79,7 +81,7 @@ export function AppLayout() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <button onClick={() => navigate("/")} className="text-xs text-muted-foreground font-medium hover:text-foreground transition-colors">
-                    Pro Orçamento
+                    {brandName}
                   </button>
                 </BreadcrumbItem>
                 {parent && (

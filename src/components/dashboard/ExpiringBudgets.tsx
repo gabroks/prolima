@@ -15,32 +15,32 @@ interface ExpiringBudgetsProps {
 export function ExpiringBudgets({ budgets }: ExpiringBudgetsProps) {
   const navigate = useNavigate();
 
-  const expiringBudgets = useMemo(() => {
+  const { expiringBudgets, expiredBudgets, totalCount } = useMemo(() => {
     const now = new Date();
-    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const todayStr = now.toISOString().split("T")[0];
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const futureStr = in7Days.toISOString().split("T")[0];
 
-    return budgets
-      .filter(b =>
-        b.validity_date &&
-        (b.status === "issued" || b.status === "draft") &&
-        b.validity_date >= todayStr &&
-        b.validity_date <= futureStr
-      )
-      .sort((a, b) => (a.validity_date ?? "").localeCompare(b.validity_date ?? ""));
-  }, [budgets]);
-
-  const expiredBudgets = useMemo(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    return budgets.filter(b =>
-      b.validity_date &&
-      b.validity_date < todayStr &&
-      (b.status === "issued" || b.status === "draft")
+    const activeBudgets = budgets.filter(
+      (b) => b.validity_date && (b.status === "issued" || b.status === "draft")
     );
+
+    const expired = activeBudgets
+      .filter((b) => b.validity_date! < todayStr)
+      .sort((a, b) => (b.validity_date ?? "").localeCompare(a.validity_date ?? ""));
+
+    const expiring = activeBudgets
+      .filter((b) => b.validity_date! >= todayStr && b.validity_date! <= futureStr)
+      .sort((a, b) => (a.validity_date ?? "").localeCompare(b.validity_date ?? ""));
+
+    return {
+      expiringBudgets: expiring,
+      expiredBudgets: expired,
+      totalCount: expired.length + expiring.length,
+    };
   }, [budgets]);
 
-  const totalCount = expiringBudgets.length + expiredBudgets.length;
+  const handleNavigate = (id: string) => navigate(`/editar-orcamento/${id}`);
 
   return (
     <Card className="animate-slide-up" style={{ animationDelay: "700ms", animationFillMode: "backwards" }}>
@@ -61,11 +61,14 @@ export function ExpiringBudgets({ budgets }: ExpiringBudgetsProps) {
           <WidgetEmpty icon={CalendarClock} title="Nenhum vencimento próximo" subtitle="Todos os orçamentos em dia" />
         ) : (
           <div className="space-y-2">
-            {expiredBudgets.slice(0, 3).map(b => (
+            {expiredBudgets.slice(0, 3).map((b) => (
               <div
                 key={b.id}
-                className="flex items-center justify-between cursor-pointer hover:bg-destructive/5 -mx-2 px-2 py-2 rounded transition-colors"
-                onClick={() => navigate(`/editar-orcamento/${b.id}`)}
+                role="button"
+                tabIndex={0}
+                className="flex items-center justify-between cursor-pointer hover:bg-destructive/5 -mx-2 px-2 py-2 rounded transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                onClick={() => handleNavigate(b.id)}
+                onKeyDown={(e) => e.key === "Enter" && handleNavigate(b.id)}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
@@ -77,13 +80,16 @@ export function ExpiringBudgets({ budgets }: ExpiringBudgetsProps) {
                 <span className="text-sm font-semibold tabular-nums shrink-0 ml-2">{formatCurrency(Number(b.total))}</span>
               </div>
             ))}
-            {expiringBudgets.slice(0, 3).map(b => {
-              const daysLeft = Math.ceil((new Date(b.validity_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            {expiringBudgets.slice(0, 3).map((b) => {
+              const daysLeft = Math.ceil((new Date(b.validity_date!).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
               return (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between cursor-pointer hover:bg-muted/40 -mx-2 px-2 py-2 rounded transition-colors"
-                  onClick={() => navigate(`/editar-orcamento/${b.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  className="flex items-center justify-between cursor-pointer hover:bg-muted/40 -mx-2 px-2 py-2 rounded transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  onClick={() => handleNavigate(b.id)}
+                  onKeyDown={(e) => e.key === "Enter" && handleNavigate(b.id)}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <CalendarClock className="h-3.5 w-3.5 text-warning shrink-0" />
