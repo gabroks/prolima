@@ -65,6 +65,7 @@ export function AppLayout() {
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const { data: isAdmin } = useIsAdmin();
   const { data: profile } = useCurrentProfile();
+  const { brandName } = useBranding();
   const displayName = profile?.name || profile?.email?.split("@")[0] || "";
 
   return (
