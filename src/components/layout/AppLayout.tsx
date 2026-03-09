@@ -9,6 +9,7 @@ import { Bell, Shield, User } from "lucide-react";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { useBranding } from "@/hooks/useBranding";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
