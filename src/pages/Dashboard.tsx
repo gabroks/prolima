@@ -131,7 +131,7 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        <QuickActions />
+        <DashboardPeriodFilter active={period} onChange={setPeriod} />
       </div>
 
       {/* Onboarding for new users - shows until core setup is complete */}
