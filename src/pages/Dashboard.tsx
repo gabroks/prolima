@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck, AlertCircle } from "lucide-react";
+import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck, AlertCircle, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
@@ -14,6 +14,7 @@ import { ExpiringBudgets } from "@/components/dashboard/ExpiringBudgets";
 import { WelcomeOnboarding } from "@/components/dashboard/WelcomeOnboarding";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -25,6 +26,15 @@ function getGreeting(): string {
 
 export default function Dashboard() {
   const data = useDashboardData();
+  const queryClient = useQueryClient();
+
+  const handleRetry = () => {
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
+    queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    queryClient.invalidateQueries({ queryKey: ["materials"] });
+    queryClient.invalidateQueries({ queryKey: ["payments"] });
+    queryClient.invalidateQueries({ queryKey: ["expenses"] });
+  };
 
   if (data.isLoading) {
     return (
@@ -52,7 +62,8 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
             Não foi possível carregar os dados do dashboard. Verifique sua conexão e tente novamente.
           </p>
-          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+          <Button variant="outline" className="mt-4 gap-2" onClick={handleRetry}>
+            <RefreshCw className="h-4 w-4" />
             Tentar novamente
           </Button>
         </CardContent>
@@ -61,6 +72,9 @@ export default function Dashboard() {
   }
 
   const todayFormatted = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  // Show onboarding only when user hasn't completed all setup steps
+  const showOnboarding = data.clients.length === 0 || data.materials.length === 0 || data.budgets.length === 0;
 
   const summaryCards = [
     { title: "Clientes", value: data.clients.length, subtitle: `${data.activeClients} ativo${data.activeClients !== 1 ? "s" : ""}`, icon: Users, trend: null, trendUp: true, href: "/clientes" },
@@ -75,9 +89,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {getGreeting()}{data.userName ? `, ${data.userName}` : ""}! <Sparkles className="h-5 w-5 text-primary" />
-          </h2>
+          </h1>
           <div className="flex items-center gap-3 mt-1">
             <p className="text-xs text-muted-foreground flex items-center gap-1.5 capitalize">
               <CalendarDays className="h-3.5 w-3.5" />
@@ -96,8 +110,8 @@ export default function Dashboard() {
         <QuickActions />
       </div>
 
-      {/* Onboarding for new users */}
-      {data.isEmpty && (
+      {/* Onboarding for new users - shows until core setup is complete */}
+      {showOnboarding && (
         <WelcomeOnboarding
           userName={data.userName}
           hasClients={data.clients.length > 0}
@@ -108,7 +122,7 @@ export default function Dashboard() {
       )}
 
       {/* Summary Cards */}
-      <SummaryCards cards={summaryCards} isLoading={data.isLoading} />
+      <SummaryCards cards={summaryCards} />
 
       {/* Conversion Metrics */}
       <ConversionMetrics budgets={data.budgets} approvedBudgets={data.approvedBudgets} pendingBudgets={data.pendingBudgets} rejectedCount={data.rejectedBudgets.length} />
