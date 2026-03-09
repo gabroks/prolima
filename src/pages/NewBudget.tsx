@@ -11,27 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClients } from "@/hooks/useClients";
-import { useMaterials, useCreateMaterial, type MaterialForm } from "@/hooks/useMaterials";
+import { useMaterials } from "@/hooks/useMaterials";
 import { useBudgetCount, useCreateBudget, useUpdateBudget, useBudgetById, type BudgetFormData } from "@/hooks/useBudgets";
 import { useQuotaCheck } from "@/hooks/useQuotaCheck";
-import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
+import { BudgetItemDialog, emptyItemForm, calcItemTotal, type ItemForm } from "@/components/budget/BudgetItemDialog";
 import { BudgetItem } from "@/types";
 import {
   Plus, Trash2, FileText, Package, ChevronRight, ChevronLeft,
-  User, Calendar, Ruler, Pencil, Save, Send, Search,
+  User, Calendar, Pencil, Save, Send, Search,
   AlertCircle, CheckCircle2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/formatters";
-
-interface ItemForm { materialId: string; unit: string; width: number; height: number; qty: number; unitPrice: number; notes: string; }
-const emptyItemForm: ItemForm = { materialId: "", unit: "", width: 0, height: 0, qty: 1, unitPrice: 0, notes: "" };
-
-function calcItemTotal(item: { width: number; height: number; qty: number; unitPrice: number; unit: string }): number {
-  if (item.unit === "m²" && item.width > 0 && item.height > 0) return (item.width / 100) * (item.height / 100) * item.qty * item.unitPrice;
-  return item.qty * item.unitPrice;
-}
 
 const STEPS = [
   { id: 1, label: "Cliente & Serviço", icon: User },
@@ -51,33 +43,6 @@ export default function NewBudget() {
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
   const budgetQuota = useQuotaCheck("budgets");
-  const createMaterial = useCreateMaterial();
-
-  // Inline material creation state
-  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
-  const emptyMaterialForm: MaterialForm = { name: "", category: "", chargeUnit: "m²", measureUnit: "centímetro", basePrice: 0, notes: "" };
-  const [materialForm, setMaterialForm] = useState<MaterialForm>(emptyMaterialForm);
-  const materialCategories = useMemo(() => [...new Set(materials.map(m => m.category))].sort(), [materials]);
-
-  const handleSaveMaterial = () => {
-    if (!materialForm.name) { toast.error("Informe o nome do material"); return; }
-    if (!materialForm.basePrice) { toast.error("Informe o preço base"); return; }
-    createMaterial.mutate(materialForm, {
-      onSuccess: (newMaterial) => {
-        setMaterialDialogOpen(false);
-        setMaterialForm(emptyMaterialForm);
-        // Auto-select the newly created material in the item form
-        if (newMaterial) {
-          setItemForm(prev => ({
-            ...prev,
-            materialId: newMaterial.id,
-            unit: newMaterial.charge_unit,
-            unitPrice: Number(newMaterial.base_price),
-          }));
-        }
-      },
-    });
-  };
 
   const budgetNumber = useMemo(() => {
     if (isEditMode && existingBudget) return existingBudget.number;
@@ -157,13 +122,12 @@ export default function NewBudget() {
     return clients.filter(c => c.status === "active").filter(c => !q || c.name.toLowerCase().includes(q) || c.document.includes(q) || (c.city?.toLowerCase().includes(q)));
   }, [clientSearch, clients]);
 
-  const selectMaterial = (id: string) => {
-    const m = materials.find(x => x.id === id);
-    if (m) setItemForm(prev => ({ ...prev, materialId: id, unit: m.charge_unit, unitPrice: Number(m.base_price) }));
-  };
-
   const openAddItem = () => { setEditingItemId(null); setItemForm(emptyItemForm); setItemDialogOpen(true); };
-  const openEditItem = (item: BudgetItem) => { setEditingItemId(item.id); setItemForm({ materialId: item.materialId, unit: item.unit, width: item.width, height: item.height, qty: item.qty, unitPrice: item.unitPrice, notes: item.notes || "" }); setItemDialogOpen(true); };
+  const openEditItem = (item: BudgetItem) => {
+    setEditingItemId(item.id);
+    setItemForm({ materialId: item.materialId, unit: item.unit, width: item.width, height: item.height, qty: item.qty, unitPrice: item.unitPrice, notes: item.notes || "" });
+    setItemDialogOpen(true);
+  };
 
   const saveItem = () => {
     const material = materials.find(m => m.id === itemForm.materialId);
@@ -201,13 +165,12 @@ export default function NewBudget() {
   };
 
   const canProceed = (s: number) => { if (s === 1) return !!clientId; if (s === 2) return items.length > 0; return true; };
-  const previewTotal = useMemo(() => itemForm.qty > 0 && itemForm.unitPrice > 0 ? calcItemTotal(itemForm) : 0, [itemForm]);
-  const previewArea = useMemo(() => itemForm.unit === "m²" && itemForm.width > 0 && itemForm.height > 0 ? (itemForm.width / 100) * (itemForm.height / 100) : 0, [itemForm]);
 
   if (lc || lm || (isEditMode && loadingBudget)) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">{isEditMode ? "Editar Orçamento" : "Novo Orçamento"}</h2>
@@ -215,12 +178,16 @@ export default function NewBudget() {
         </div>
         <Button variant="outline" size="sm" onClick={handleCancel}><X className="h-4 w-4 mr-1.5" />Cancelar</Button>
       </div>
+
+      {/* Quota warning */}
       {!isEditMode && budgetQuota.isAtLimit && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{budgetQuota.message}</span>
         </div>
       )}
+
+      {/* Stepper */}
       <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-2">
         {STEPS.map((s) => (
           <button key={s.id} onClick={() => setStep(s.id)} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${step === s.id ? "bg-background text-primary shadow-sm" : step > s.id ? "text-primary/70 hover:bg-background/50" : "text-muted-foreground hover:bg-background/50"}`}>
@@ -230,6 +197,7 @@ export default function NewBudget() {
         ))}
       </div>
 
+      {/* Step 1: Client & Service */}
       {step === 1 && (
         <div className="space-y-4 animate-fade-in">
           <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4 text-primary" />Cliente</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -254,6 +222,7 @@ export default function NewBudget() {
         </div>
       )}
 
+      {/* Step 2: Items */}
       {step === 2 && (
         <div className="space-y-4 animate-fade-in">
           <Card><CardHeader><div className="flex items-center justify-between"><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4 text-primary" />Itens do Orçamento{items.length > 0 && <Badge variant="secondary" className="ml-1">{items.length}</Badge>}</CardTitle><Button size="sm" onClick={openAddItem}><Plus className="h-4 w-4 mr-1.5" />Adicionar Item</Button></div></CardHeader><CardContent className="p-0">
@@ -268,6 +237,7 @@ export default function NewBudget() {
         </div>
       )}
 
+      {/* Step 3: Financial & Conditions */}
       {step === 3 && (
         <div className="space-y-4 animate-fade-in">
           <Card><CardHeader><CardTitle className="text-base">Descontos e Custos Adicionais</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
@@ -291,6 +261,7 @@ export default function NewBudget() {
         </div>
       )}
 
+      {/* Navigation */}
       <div className="flex items-center justify-between pb-6">
         <Button variant="outline" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}><ChevronLeft className="h-4 w-4 mr-1.5" />Voltar</Button>
         <div className="flex gap-2">
@@ -301,32 +272,16 @@ export default function NewBudget() {
         </div>
       </div>
 
-      <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{editingItemId ? "Editar Item" : "Adicionar Item"}</DialogTitle><DialogDescription>Selecione o material e preencha as dimensões.</DialogDescription></DialogHeader>
-        <div className="grid gap-4">
-          <div><Label>Material *</Label>
-            <div className="flex gap-2">
-              <div className="flex-1"><Select value={itemForm.materialId} onValueChange={selectMaterial}><SelectTrigger><SelectValue placeholder="Selecione um material" /></SelectTrigger><SelectContent>{materials.map(m => <SelectItem key={m.id} value={m.id}>{m.name} — {formatCurrency(Number(m.base_price))}/{m.charge_unit}</SelectItem>)}</SelectContent></Select></div>
-              <Button type="button" variant="outline" size="icon" title="Cadastrar novo material" onClick={() => setMaterialDialogOpen(true)}><Plus className="h-4 w-4" /></Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><Label>Unidade</Label><Input value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} /></div>
-            <div><Label>Quantidade *</Label><Input type="number" min="1" value={itemForm.qty || ""} onChange={(e) => setItemForm({ ...itemForm, qty: parseInt(e.target.value) || 1 })} /></div>
-            <div><Label>Preço Unit. *</Label><Input type="number" step="0.01" min="0" value={itemForm.unitPrice || ""} onChange={(e) => setItemForm({ ...itemForm, unitPrice: parseFloat(e.target.value) || 0 })} /></div>
-          </div>
-          <div className="rounded-lg border p-3 space-y-3">
-            <div className="flex items-center gap-2"><Ruler className="h-4 w-4 text-primary" /><Label className="text-sm font-semibold">Dimensões (cm)</Label>{itemForm.unit === "m²" && <Badge variant="outline" className="text-[10px]">Cálculo por área</Badge>}</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Largura (cm)</Label><Input type="number" step="1" min="0" value={itemForm.width || ""} onChange={(e) => setItemForm({ ...itemForm, width: parseFloat(e.target.value) || 0 })} /></div>
-              <div><Label className="text-xs">Altura (cm)</Label><Input type="number" step="1" min="0" value={itemForm.height || ""} onChange={(e) => setItemForm({ ...itemForm, height: parseFloat(e.target.value) || 0 })} /></div>
-            </div>
-            {previewArea > 0 && <p className="text-xs text-muted-foreground">Área: <span className="font-semibold text-foreground tabular-nums">{previewArea.toFixed(4)} m²</span>{itemForm.qty > 1 && <> × {itemForm.qty} = <span className="font-semibold text-foreground tabular-nums">{(previewArea * itemForm.qty).toFixed(4)} m² total</span></>}</p>}
-          </div>
-          <div><Label>Observações do item</Label><Input value={itemForm.notes} onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })} placeholder="Detalhes adicionais…" /></div>
-          {previewTotal > 0 && <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 p-3"><span className="text-sm font-medium">Subtotal do item</span><span className="text-lg font-bold text-primary tabular-nums">{formatCurrency(previewTotal)}</span></div>}
-        </div>
-        <DialogFooter><Button variant="outline" onClick={() => setItemDialogOpen(false)}>Cancelar</Button><Button onClick={saveItem}>{editingItemId ? "Atualizar" : "Adicionar"}</Button></DialogFooter>
-      </DialogContent></Dialog>
+      {/* Item Dialog */}
+      <BudgetItemDialog
+        open={itemDialogOpen}
+        onOpenChange={setItemDialogOpen}
+        itemForm={itemForm}
+        setItemForm={setItemForm}
+        materials={materials}
+        editingItemId={editingItemId}
+        onSave={saveItem}
+      />
 
       {/* Cancel confirmation dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -341,18 +296,6 @@ export default function NewBudget() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Inline material creation dialog */}
-      <MaterialFormDialog
-        open={materialDialogOpen}
-        onOpenChange={(open) => { if (!open) setMaterialDialogOpen(false); }}
-        form={materialForm}
-        onFormChange={setMaterialForm}
-        onSave={handleSaveMaterial}
-        isEditing={false}
-        isPending={createMaterial.isPending}
-        categories={materialCategories}
-      />
     </div>
   );
 }
