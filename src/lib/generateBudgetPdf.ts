@@ -69,6 +69,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 }
 
 export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCompanySettings | null) {
+  const PRIMARY = getThemePrimary();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
