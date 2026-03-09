@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, FileText, TrendingUp, TrendingDown, Sparkles, CalendarDays, Layers, Truck, AlertCircle, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
@@ -12,6 +13,7 @@ import { RecentBudgets } from "@/components/dashboard/RecentBudgets";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ExpiringBudgets } from "@/components/dashboard/ExpiringBudgets";
 import { WelcomeOnboarding } from "@/components/dashboard/WelcomeOnboarding";
+import { DashboardPeriodFilter, type DashboardPeriod, getDateRangeForPeriod } from "@/components/dashboard/DashboardPeriodFilter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,8 +27,30 @@ function getGreeting(): string {
 }
 
 export default function Dashboard() {
+  const [period, setPeriod] = useState<DashboardPeriod>("month");
   const data = useDashboardData();
   const queryClient = useQueryClient();
+
+  const dateRange = useMemo(() => getDateRangeForPeriod(period), [period]);
+
+  const filteredPayments = useMemo(() => {
+    if (!dateRange.from) return data.payments;
+    return data.payments.filter(p => {
+      const d = new Date(p.date);
+      return d >= dateRange.from! && d <= dateRange.to;
+    });
+  }, [data.payments, dateRange]);
+
+  const filteredExpenses = useMemo(() => {
+    if (!dateRange.from) return data.expenses;
+    return data.expenses.filter(e => {
+      const d = new Date(e.date);
+      return d >= dateRange.from! && d <= dateRange.to;
+    });
+  }, [data.expenses, dateRange]);
+
+  const filteredReceitas = filteredPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const filteredDespesas = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
   const handleRetry = () => {
     queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -81,7 +105,7 @@ export default function Dashboard() {
     { title: "Orçamentos", value: data.budgets.length, subtitle: `${data.approvedBudgets.length} aprovado${data.approvedBudgets.length !== 1 ? "s" : ""}`, icon: FileText, trend: data.budgetDiff !== 0 ? `${data.budgetDiff > 0 ? "+" : ""}${data.budgetDiff} este mês` : null, trendUp: data.budgetDiff >= 0, href: "/orcamentos" },
     { title: "Materiais", value: data.materials.length, subtitle: `${data.materialCategories} categoria${data.materialCategories !== 1 ? "s" : ""}`, icon: Layers, trend: null, trendUp: true, href: "/materiais" },
     { title: "Fornecedores", value: data.suppliers.length, subtitle: `${data.activeSuppliers} ativo${data.activeSuppliers !== 1 ? "s" : ""}`, icon: Truck, trend: null, trendUp: true, href: "/fornecedores" },
-    { title: "Saldo do Mês", value: formatCurrency(data.monthSaldo), subtitle: data.monthSaldo >= 0 ? "Positivo" : "Negativo", icon: data.monthSaldo >= 0 ? TrendingUp : TrendingDown, trend: data.saldoTrendLabel, trendUp: data.saldoDiff >= 0, href: "/financeiro", negative: data.monthSaldo < 0 },
+    { title: "Saldo do Período", value: formatCurrency(filteredReceitas - filteredDespesas), subtitle: (filteredReceitas - filteredDespesas) >= 0 ? "Positivo" : "Negativo", icon: (filteredReceitas - filteredDespesas) >= 0 ? TrendingUp : TrendingDown, trend: data.saldoTrendLabel, trendUp: data.saldoDiff >= 0, href: "/financeiro", negative: (filteredReceitas - filteredDespesas) < 0 },
   ];
 
   return (
@@ -107,7 +131,7 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        <QuickActions />
+        <DashboardPeriodFilter active={period} onChange={setPeriod} />
       </div>
 
       {/* Onboarding for new users - shows until core setup is complete */}
@@ -130,8 +154,8 @@ export default function Dashboard() {
       {/* Financial Summary + Revenue Chart */}
       <div className="grid gap-4 lg:grid-cols-3">
         <FinancialSummary
-          totalReceitas={data.totalReceitas}
-          totalDespesas={data.totalDespesas}
+          totalReceitas={filteredReceitas}
+          totalDespesas={filteredDespesas}
           totalApproved={data.totalApproved}
           monthReceitas={data.monthReceitas}
           monthDespesas={data.monthDespesas}
@@ -139,7 +163,7 @@ export default function Dashboard() {
           prevMonthDespesas={data.prevMonthDespesas}
           topClients={data.topClients}
         />
-        <RevenueChart payments={data.payments} expenses={data.expenses} />
+        <RevenueChart payments={filteredPayments} expenses={filteredExpenses} />
       </div>
 
       {/* Status + Recent Budgets + Activity */}

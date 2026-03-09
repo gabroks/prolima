@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBudgets, useBudgetCount, useUpdateBudgetStatus, useDeleteBudget, useDuplicateBudget, type BudgetWithItems } from "@/hooks/useBudgets";
 import { usePayments } from "@/hooks/usePayments";
+import { useClients } from "@/hooks/useClients";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
   ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2, Download, Pencil,
@@ -33,6 +34,7 @@ export default function Budgets() {
   const { data: budgets = [], isLoading } = useBudgets();
   const { data: budgetCount = 0 } = useBudgetCount();
   const { data: payments = [] } = usePayments();
+  const { data: clients = [] } = useClients();
   const updateStatus = useUpdateBudgetStatus();
   const deleteBudget = useDeleteBudget();
   const duplicateBudget = useDuplicateBudget();
@@ -61,8 +63,15 @@ export default function Budgets() {
 
   const companyName = companySettings?.nome_fantasia || companySettings?.razao_social || "";
 
+  const clientPhoneMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    clients.forEach(c => { if (c.phone) map[c.id] = c.phone; });
+    return map;
+  }, [clients]);
+
   const handleWhatsApp = (budget: BudgetWithItems) => {
-    openWhatsAppShare(budget, companyName);
+    const phone = budget.client_id ? clientPhoneMap[budget.client_id] : undefined;
+    openWhatsAppShare(budget, companyName, phone);
   };
 
   const handleCopyText = async (budget: BudgetWithItems) => {
