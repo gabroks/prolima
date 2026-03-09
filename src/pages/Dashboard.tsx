@@ -125,7 +125,7 @@ export default function Dashboard() {
       <SummaryCards cards={summaryCards} />
 
       {/* Conversion Metrics */}
-      <ConversionMetrics budgets={data.budgets} approvedBudgets={data.approvedBudgets} pendingBudgets={data.pendingBudgets} rejectedCount={data.rejectedBudgets.length} />
+      <ConversionMetrics budgets={data.budgets} approvedBudgets={data.approvedBudgets} pendingBudgets={data.pendingBudgets} rejectedCount={data.rejectedBudgets.length} pendingTotal={data.pendingTotal} />
 
       {/* Financial Summary + Revenue Chart */}
       <div className="grid gap-4 lg:grid-cols-3">
