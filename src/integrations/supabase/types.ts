@@ -213,6 +213,8 @@ export type Database = {
       }
       company_settings: {
         Row: {
+          brand_name: string
+          brand_subtitle: string
           cep: string
           city: string
           cnpj: string
@@ -242,6 +244,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brand_name?: string
+          brand_subtitle?: string
           cep?: string
           city?: string
           cnpj?: string
@@ -271,6 +275,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brand_name?: string
+          brand_subtitle?: string
           cep?: string
           city?: string
           cnpj?: string

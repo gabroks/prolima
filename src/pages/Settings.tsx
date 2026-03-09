@@ -15,43 +15,13 @@ import { useCompanySettings, useUpdateCompanySettings } from "@/hooks/useCompany
 import { useIsAdmin } from "@/hooks/useAdmin";
 import {
   Upload, Building2, Palette, QrCode, Save, Check,
-  FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin,
+  FileText, Bell, Shield, Printer, Globe, Phone, Mail, MapPin, Type,
 } from "lucide-react";
 import { FileUpload } from "@/components/settings/FileUpload";
 import { AdminClientsList } from "@/components/settings/AdminClientsList";
+import { colorOptions, applyThemeToDOM } from "@/hooks/useBranding";
 
 
-const colorOptions = [
-  { name: "Verde", value: "green", hsl: "152 58% 36%", sidebar: "160 20% 10%", accent: "148 18% 91%" },
-  { name: "Azul", value: "blue", hsl: "215 76% 52%", sidebar: "220 25% 10%", accent: "210 20% 92%" },
-  { name: "Laranja", value: "orange", hsl: "38 92% 50%", sidebar: "20 25% 10%", accent: "25 20% 93%" },
-  { name: "Roxo", value: "purple", hsl: "280 55% 50%", sidebar: "280 20% 10%", accent: "275 18% 92%" },
-  { name: "Vermelho", value: "red", hsl: "0 72% 51%", sidebar: "0 20% 10%", accent: "355 18% 93%" },
-  { name: "Teal", value: "teal", hsl: "174 60% 40%", sidebar: "178 22% 10%", accent: "172 18% 92%" },
-  { name: "Rosa", value: "pink", hsl: "330 70% 55%", sidebar: "335 20% 10%", accent: "325 18% 92%" },
-  { name: "Índigo", value: "indigo", hsl: "240 60% 55%", sidebar: "245 22% 10%", accent: "235 18% 92%" },
-];
-
-function applyThemeToDOM(colorValue: string) {
-  const color = colorOptions.find(c => c.value === colorValue);
-  if (!color) return;
-  const root = document.documentElement;
-  root.style.setProperty("--primary", color.hsl);
-  root.style.setProperty("--ring", color.hsl);
-  root.style.setProperty("--sidebar-background", color.sidebar);
-  root.style.setProperty("--accent", color.accent);
-  root.style.setProperty("--chart-1", color.hsl);
-  const parts = color.hsl.split(" ");
-  if (parts.length === 3) {
-    const lightness = parseInt(parts[2]);
-    const sidebarPrimary = `${parts[0]} ${parts[1]} ${Math.min(lightness + 10, 60)}%`;
-    root.style.setProperty("--sidebar-primary", sidebarPrimary);
-  }
-  localStorage.setItem("app-theme-primary", color.hsl);
-  localStorage.setItem("app-theme-sidebar", color.sidebar);
-  localStorage.setItem("app-theme-accent", color.accent);
-  localStorage.setItem("app-theme-name", color.name);
-}
 
 const STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -76,6 +46,8 @@ export default function SettingsPage() {
     state: dbSettings.state,
     cep: dbSettings.cep,
     themeColor: dbSettings.theme_color,
+    brandName: (dbSettings as any).brand_name || "Pro Orçamento",
+    brandSubtitle: (dbSettings as any).brand_subtitle || "Gestão inteligente",
     logo: dbSettings.logo || "",
     pixQrCode: dbSettings.pix_qr_code || "",
     docShowLogo: dbSettings.doc_show_logo,
@@ -122,6 +94,8 @@ export default function SettingsPage() {
         state: settings.state,
         cep: settings.cep,
         theme_color: settings.themeColor,
+        brand_name: settings.brandName,
+        brand_subtitle: settings.brandSubtitle,
         logo: settings.logo || null,
         pix_qr_code: settings.pixQrCode || null,
         doc_show_logo: settings.docShowLogo,
@@ -289,10 +263,31 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="visual" className="space-y-4">
+          {/* Brand Identity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Type className="h-4 w-4 text-primary" />Identidade da Marca</CardTitle>
+              <CardDescription>Personalize o nome e subtítulo exibidos na sidebar e em todo o sistema.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Nome do Sistema</Label>
+                <Input value={settings.brandName} onChange={(e) => update("brandName", e.target.value)} placeholder="Pro Orçamento" maxLength={30} />
+                <p className="text-[10px] text-muted-foreground mt-1">Exibido no topo da sidebar e cabeçalhos.</p>
+              </div>
+              <div>
+                <Label>Subtítulo</Label>
+                <Input value={settings.brandSubtitle} onChange={(e) => update("brandSubtitle", e.target.value)} placeholder="Gestão inteligente" maxLength={30} />
+                <p className="text-[10px] text-muted-foreground mt-1">Texto complementar abaixo do nome.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Theme Color */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><Palette className="h-4 w-4 text-primary" />Cor Principal</CardTitle>
-              <CardDescription>Cor usada nos documentos e detalhes do sistema.</CardDescription>
+              <CardDescription>Aplicada em botões, sidebar, gráficos, relatórios e PDFs de orçamento.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
@@ -306,25 +301,51 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-4">A cor selecionada será aplicada nos documentos gerados (orçamentos, relatórios). O tema do sistema pode ser alternado entre claro/escuro na sidebar.</p>
+              <p className="text-xs text-muted-foreground mt-4">A cor é aplicada instantaneamente em toda a interface, gráficos e documentos gerados.</p>
             </CardContent>
           </Card>
+
+          {/* Live Preview */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Prévia da Cor</CardTitle></CardHeader>
-            <CardContent>
+            <CardHeader><CardTitle className="text-base">Prévia White Label</CardTitle><CardDescription>Veja como sua marca aparece no sistema.</CardDescription></CardHeader>
+            <CardContent className="space-y-4">
+              {/* Sidebar Preview */}
+              <div className="rounded-xl overflow-hidden border">
+                <div className="p-4 flex items-center gap-2.5" style={{ backgroundColor: `hsl(${colorOptions.find(c => c.value === settings.themeColor)?.sidebar || "160 20% 10%"})` }}>
+                  <div className="h-9 w-9 rounded-lg flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, hsl(${colorOptions.find(c => c.value === settings.themeColor)?.hsl || "152 58% 36%"}), hsl(${colorOptions.find(c => c.value === settings.themeColor)?.hsl || "152 58% 36%"} / 0.7))` }}>
+                    <Shield className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white leading-tight">{settings.brandName || "Pro Orçamento"}</p>
+                    <p className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-medium">{settings.brandSubtitle || "Gestão inteligente"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Elements preview */}
               <div className="grid grid-cols-3 gap-3">
-                {["Botão primário", "Badge status", "Cabeçalho doc"].map((label, i) => {
+                {(() => {
                   const selectedColor = colorOptions.find(c => c.value === settings.themeColor);
                   const hsl = selectedColor?.hsl || "152 58% 36%";
                   return (
-                    <div key={label} className="rounded-lg border p-4 flex flex-col items-center gap-2">
-                      {i === 0 && <div className="px-4 py-2 rounded-md text-white text-xs font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>Emitir Orçamento</div>}
-                      {i === 1 && <div className="px-2.5 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>Aprovado</div>}
-                      {i === 2 && <div className="w-full h-2 rounded-full" style={{ backgroundColor: `hsl(${hsl})` }} />}
-                      <span className="text-[10px] text-muted-foreground">{label}</span>
-                    </div>
+                    <>
+                      <div className="rounded-lg border p-4 flex flex-col items-center gap-2">
+                        <div className="px-4 py-2 rounded-md text-white text-xs font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>Emitir Orçamento</div>
+                        <span className="text-[10px] text-muted-foreground">Botão primário</span>
+                      </div>
+                      <div className="rounded-lg border p-4 flex flex-col items-center gap-2">
+                        <div className="px-2.5 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: `hsl(${hsl})` }}>Aprovado</div>
+                        <span className="text-[10px] text-muted-foreground">Badge status</span>
+                      </div>
+                      <div className="rounded-lg border p-4 flex flex-col items-center gap-2">
+                        <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: `hsl(${hsl} / 0.2)` }}>
+                          <div className="h-full rounded-full w-2/3" style={{ backgroundColor: `hsl(${hsl})` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">Progresso</span>
+                      </div>
+                    </>
                   );
-                })}
+                })()}
               </div>
             </CardContent>
           </Card>

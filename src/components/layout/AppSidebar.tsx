@@ -20,6 +20,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { useBranding } from "@/hooks/useBranding";
 
 interface MenuItem {
   title: string;
@@ -103,6 +104,7 @@ export function AppSidebar() {
   const initials = getInitials(displayName);
   const { theme, setTheme } = useTheme();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
+  const { brandName, brandSubtitle } = useBranding();
 
   const handleLogout = async () => {
     await signOut();
@@ -120,8 +122,8 @@ export function AppSidebar() {
             <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-sidebar-foreground tracking-tight leading-tight">Pro Orçamento</h2>
-            <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-[0.15em] font-medium">Gestão inteligente</p>
+            <h2 className="text-base font-bold text-sidebar-foreground tracking-tight leading-tight truncate">{brandName}</h2>
+            <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-[0.15em] font-medium truncate">{brandSubtitle}</p>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
