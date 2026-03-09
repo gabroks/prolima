@@ -44,8 +44,8 @@ function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, 
   drawRoundedRect(doc, x, y, w, h, 2, fillColor ? "FD" : "S");
 }
 
-function drawSectionTitle(doc: jsPDF, title: string, x: number, y: number, w: number) {
-  doc.setFillColor(...PRIMARY);
+function drawSectionTitle(doc: jsPDF, title: string, x: number, y: number, w: number, color: [number, number, number] = [45, 138, 94]) {
+  doc.setFillColor(...color);
   doc.rect(x, y, w, 7, "F");
   doc.setTextColor(...WHITE);
   doc.setFont("helvetica", "bold");
