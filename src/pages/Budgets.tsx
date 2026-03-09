@@ -404,9 +404,15 @@ export default function Budgets() {
                       return <Button key={s} variant="outline" size="sm" onClick={() => changeStatus(detailBudget.id, s)}><Icon className="h-3.5 w-3.5 mr-1.5" />{cfg.label}</Button>;
                     })}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button variant="default" size="sm" onClick={() => handleDownloadPdf(detailBudget)} disabled={generatingPdfId === detailBudget.id}>
                       {generatingPdfId === detailBudget.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}Baixar PDF
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50" onClick={() => handleWhatsApp(detailBudget)}>
+                      <MessageCircle className="h-3.5 w-3.5 mr-1.5" />WhatsApp
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleCopyText(detailBudget)}>
+                      <ClipboardCopy className="h-3.5 w-3.5 mr-1.5" />Copiar Texto
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => { setDetailBudget(null); navigate(`/editar-orcamento/${detailBudget.id}`); }}>
                       <Pencil className="h-3.5 w-3.5 mr-1.5" />Editar
