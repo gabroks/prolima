@@ -165,7 +165,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     doc.setTextColor(...DARK);
     const descLines = doc.splitTextToSize(budget.service_description, contentWidth);
     doc.text(descLines, margin, y);
-    y += descLines.length * 3.5 + 4;
+    y += descLines.length * 3.5 + 8;
   }
 
   // ─── Materials table ───
@@ -250,7 +250,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     doc.setFont("helvetica", bold ? "bold" : "normal");
     doc.setFontSize(bold ? 12 : 9);
     doc.setTextColor(...GRAY);
-    doc.text(label, totalsX, y);
+    doc.text(label, valX - doc.getTextWidth(value) - 2, y, { align: "right" });
     doc.setTextColor(...color);
     doc.text(value, valX, y, { align: "right" });
     y += bold ? 8 : 5;
