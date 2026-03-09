@@ -63,8 +63,15 @@ export default function Budgets() {
 
   const companyName = companySettings?.nome_fantasia || companySettings?.razao_social || "";
 
+  const clientPhoneMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    clients.forEach(c => { if (c.phone) map[c.id] = c.phone; });
+    return map;
+  }, [clients]);
+
   const handleWhatsApp = (budget: BudgetWithItems) => {
-    openWhatsAppShare(budget, companyName);
+    const phone = budget.client_id ? clientPhoneMap[budget.client_id] : undefined;
+    openWhatsAppShare(budget, companyName, phone);
   };
 
   const handleCopyText = async (budget: BudgetWithItems) => {
