@@ -14,12 +14,12 @@ interface ConversionMetricsProps {
   approvedBudgets: BudgetWithItems[];
   pendingBudgets: BudgetWithItems[];
   rejectedCount?: number;
+  pendingTotal?: number;
 }
 
-export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, rejectedCount = 0 }: ConversionMetricsProps) {
+export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, rejectedCount = 0, pendingTotal: pendingTotalProp }: ConversionMetricsProps) {
   const navigate = useNavigate();
 
-  // Exclude drafts from conversion calc — only issued/approved/rejected are meaningful
   const issuedOrBeyond = budgets.filter((b) => b.status !== "draft");
   const conversionRate = issuedOrBeyond.length > 0
     ? Math.round((approvedBudgets.length / issuedOrBeyond.length) * 100)
@@ -29,13 +29,12 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, re
     ? Math.round((rejectedCount / issuedOrBeyond.length) * 100)
     : 0;
 
-  // Ticket médio only from non-draft budgets with total > 0
   const budgetsWithValue = budgets.filter((b) => Number(b.total) > 0);
   const ticketMedio = budgetsWithValue.length > 0
     ? budgetsWithValue.reduce((s, b) => s + Number(b.total), 0) / budgetsWithValue.length
     : 0;
 
-  const pendingTotal = pendingBudgets.reduce((s, b) => s + Number(b.total), 0);
+  const pendingTotal = pendingTotalProp ?? pendingBudgets.reduce((s, b) => s + Number(b.total), 0);
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -106,8 +105,11 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, re
                 return (
                   <div
                     key={b.id}
-                    className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -mx-1 px-1 rounded transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -mx-1 px-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     onClick={() => navigate("/orcamentos")}
+                    onKeyDown={(e) => e.key === "Enter" && navigate("/orcamentos")}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" />
@@ -124,7 +126,10 @@ export function ConversionMetrics({ budgets, approvedBudgets, pendingBudgets, re
               <WidgetEmpty icon={AlertCircle} title="Nenhuma pendência" subtitle="Todos os orçamentos resolvidos" />
             )}
             {pendingBudgets.length > 3 && (
-              <p className="text-[11px] text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => navigate("/orcamentos")}>
+              <p
+                className="text-[11px] text-muted-foreground cursor-pointer hover:text-primary transition-colors"
+                onClick={() => navigate("/orcamentos")}
+              >
                 +{pendingBudgets.length - 3} pendência{pendingBudgets.length - 3 > 1 ? "s" : ""} não exibida{pendingBudgets.length - 3 > 1 ? "s" : ""}
               </p>
             )}
