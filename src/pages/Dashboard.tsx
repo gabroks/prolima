@@ -154,8 +154,8 @@ export default function Dashboard() {
       {/* Financial Summary + Revenue Chart */}
       <div className="grid gap-4 lg:grid-cols-3">
         <FinancialSummary
-          totalReceitas={data.totalReceitas}
-          totalDespesas={data.totalDespesas}
+          totalReceitas={filteredReceitas}
+          totalDespesas={filteredDespesas}
           totalApproved={data.totalApproved}
           monthReceitas={data.monthReceitas}
           monthDespesas={data.monthDespesas}
@@ -163,7 +163,7 @@ export default function Dashboard() {
           prevMonthDespesas={data.prevMonthDespesas}
           topClients={data.topClients}
         />
-        <RevenueChart payments={data.payments} expenses={data.expenses} />
+        <RevenueChart payments={filteredPayments} expenses={filteredExpenses} />
       </div>
 
       {/* Status + Recent Budgets + Activity */}
