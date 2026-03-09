@@ -263,17 +263,17 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   addTotalLine("Subtotal:", formatCurrency(Number(budget.subtotal)));
   if (Number(budget.total_discount) > 0) {
     addTotalLine(
-      `Desconto${budget.discount_type === "percent" ? ` (${budget.discount_value}%)` : ""}:`,
-      `− ${formatCurrency(Number(budget.total_discount))}`,
+      `Desconto${budget.discount_type === "percent" ? ` (${budget.discount_value}%)` : ""}: −`,
+      formatCurrency(Number(budget.total_discount)),
       false,
       [200, 50, 50]
     );
   }
   if (Number(budget.freight) > 0) {
-    addTotalLine("Frete:", `+ ${formatCurrency(Number(budget.freight))}`);
+    addTotalLine("Frete: +", formatCurrency(Number(budget.freight)));
   }
   if (Number(budget.other_costs) > 0) {
-    addTotalLine("Outros custos:", `+ ${formatCurrency(Number(budget.other_costs))}`);
+    addTotalLine("Outros custos: +", formatCurrency(Number(budget.other_costs)));
   }
 
   doc.setDrawColor(200, 200, 200);
