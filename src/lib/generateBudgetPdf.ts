@@ -35,7 +35,7 @@ function drawRoundedRect(doc: jsPDF, x: number, y: number, w: number, h: number,
   doc.roundedRect(x, y, w, h, r, r, style);
 }
 
-function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, borderColor: [number, number, number] = PRIMARY, fillColor?: [number, number, number]) {
+function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, borderColor: [number, number, number] = [45, 138, 94], fillColor?: [number, number, number]) {
   if (fillColor) {
     doc.setFillColor(...fillColor);
   }
