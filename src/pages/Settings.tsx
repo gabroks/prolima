@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { FileUpload } from "@/components/settings/FileUpload";
 import { AdminClientsList } from "@/components/settings/AdminClientsList";
-import { colorOptions, applyThemeToDOM } from "@/hooks/useBranding";
+import { colorOptions, applyThemeToDOM, updateBrandingPreview } from "@/hooks/useBranding";
 
 
 
