@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClients } from "@/hooks/useClients";
-import { useMaterials } from "@/hooks/useMaterials";
+import { useMaterials, useCreateMaterial, type MaterialForm } from "@/hooks/useMaterials";
 import { useBudgetCount, useCreateBudget, useUpdateBudget, useBudgetById, type BudgetFormData } from "@/hooks/useBudgets";
 import { useQuotaCheck } from "@/hooks/useQuotaCheck";
+import { MaterialFormDialog } from "@/components/materials/MaterialFormDialog";
 import { BudgetItem } from "@/types";
 import {
   Plus, Trash2, FileText, Package, ChevronRight, ChevronLeft,
