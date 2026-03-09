@@ -126,7 +126,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   doc.setFontSize(8);
   doc.setTextColor(...GRAY);
   // We don't have client phone/email on budget, just show name
-  y += clientBoxH + 4;
+  y += clientBoxH + 8;
 
   // ─── Dates row ───
   const dateColW = contentWidth / 3;
@@ -176,7 +176,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   doc.setDrawColor(...PRIMARY);
   doc.setLineWidth(0.3);
   doc.line(margin, y + 1.5, margin + 55, y + 1.5);
-  y += 4;
+  y += 2;
 
   const items = budget.budget_items || [];
   const tableHead = [["#", "DESCRIÇÃO", "UN", "L", "A", "QTD", "PREÇO", "SUBTOTAL"]];
