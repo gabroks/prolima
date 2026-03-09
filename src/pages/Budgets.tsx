@@ -16,13 +16,14 @@ import { usePayments } from "@/hooks/usePayments";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
   ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2, Download, Pencil,
-  ArrowUpRight, ArrowDownRight, Loader2,
+  ArrowUpRight, ArrowDownRight, Loader2, MessageCircle, ClipboardCopy,
 } from "lucide-react";
 import { formatCurrency, formatDate, budgetStatusConfig, BudgetStatus } from "@/lib/formatters";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { downloadBudgetPdf } from "@/lib/generateBudgetPdf";
+import { openWhatsAppShare, copyBudgetText } from "@/lib/shareBudget";
 
 type SortKey = "date-desc" | "date-asc" | "value-desc" | "value-asc" | "client" | "number";
 const PAGE_SIZE = 15;
@@ -55,6 +56,21 @@ export default function Budgets() {
       toast.error("Erro ao gerar PDF");
     } finally {
       setGeneratingPdfId(null);
+    }
+  };
+
+  const companyName = companySettings?.nome_fantasia || companySettings?.razao_social || "";
+
+  const handleWhatsApp = (budget: BudgetWithItems) => {
+    openWhatsAppShare(budget, companyName);
+  };
+
+  const handleCopyText = async (budget: BudgetWithItems) => {
+    try {
+      await copyBudgetText(budget, companyName);
+      toast.success("Texto do orçamento copiado!");
+    } catch {
+      toast.error("Erro ao copiar texto");
     }
   };
 
@@ -292,6 +308,7 @@ export default function Budgets() {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailBudget(b)} title="Ver detalhes"><Eye className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/editar-orcamento/${b.id}`)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadPdf(b)} disabled={generatingPdfId === b.id} title="Baixar PDF">{generatingPdfId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}</Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => handleWhatsApp(b)} title="Enviar por WhatsApp"><MessageCircle className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(b)} disabled={duplicateBudget.isPending} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(b.id)} disabled={deleteBudget.isPending} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
@@ -387,9 +404,15 @@ export default function Budgets() {
                       return <Button key={s} variant="outline" size="sm" onClick={() => changeStatus(detailBudget.id, s)}><Icon className="h-3.5 w-3.5 mr-1.5" />{cfg.label}</Button>;
                     })}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button variant="default" size="sm" onClick={() => handleDownloadPdf(detailBudget)} disabled={generatingPdfId === detailBudget.id}>
                       {generatingPdfId === detailBudget.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}Baixar PDF
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50" onClick={() => handleWhatsApp(detailBudget)}>
+                      <MessageCircle className="h-3.5 w-3.5 mr-1.5" />WhatsApp
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleCopyText(detailBudget)}>
+                      <ClipboardCopy className="h-3.5 w-3.5 mr-1.5" />Copiar Texto
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => { setDetailBudget(null); navigate(`/editar-orcamento/${detailBudget.id}`); }}>
                       <Pencil className="h-3.5 w-3.5 mr-1.5" />Editar
