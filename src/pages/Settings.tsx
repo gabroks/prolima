@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { FileUpload } from "@/components/settings/FileUpload";
 import { AdminClientsList } from "@/components/settings/AdminClientsList";
-import { colorOptions, applyThemeToDOM } from "@/hooks/useBranding";
+import { colorOptions, applyThemeToDOM, updateBrandingPreview } from "@/hooks/useBranding";
 
 
 
@@ -69,11 +69,19 @@ export default function SettingsPage() {
   }, [dbSettings?.theme_color]);
 
   const update = (field: string, value: string | boolean | number) => {
-    setLocalSettings(prev => ({ ...(prev || settings || {}), [field]: value }));
+    const newSettings = { ...(localSettings || settings || {}), [field]: value };
+    setLocalSettings(newSettings);
     setHasChanges(true);
     // Apply theme immediately when color is changed
     if (field === "themeColor" && typeof value === "string") {
       applyThemeToDOM(value);
+    }
+    // Broadcast brand changes for real-time sidebar preview
+    if (field === "brandName" || field === "brandSubtitle") {
+      updateBrandingPreview(
+        field === "brandName" ? String(value) : newSettings.brandName || "Pro Orçamento",
+        field === "brandSubtitle" ? String(value) : newSettings.brandSubtitle || "Gestão inteligente"
+      );
     }
   };
 
