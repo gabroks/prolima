@@ -89,9 +89,20 @@ export default function SettingsPage() {
     notifWeeklyReport: dbSettings.notif_weekly_report,
   } : null);
 
+  // Apply theme colors on load from DB settings
+  useEffect(() => {
+    if (dbSettings?.theme_color) {
+      applyThemeToDOM(dbSettings.theme_color);
+    }
+  }, [dbSettings?.theme_color]);
+
   const update = (field: string, value: string | boolean | number) => {
     setLocalSettings(prev => ({ ...(prev || settings || {}), [field]: value }));
     setHasChanges(true);
+    // Apply theme immediately when color is changed
+    if (field === "themeColor" && typeof value === "string") {
+      applyThemeToDOM(value);
+    }
   };
 
   const handleSave = () => {
