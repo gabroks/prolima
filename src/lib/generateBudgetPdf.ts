@@ -184,14 +184,16 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     const w = Number(item.width);
     const h = Number(item.height);
     const desc = item.material_name + (item.notes ? `\nObs: ${item.notes}` : "");
+    const qty = Number(item.qty);
+    const unitPrice = qty === 1 ? Number(item.total) : Number(item.unit_price);
     return [
       String(i + 1),
       desc,
       item.unit,
       w > 0 ? String(w) : "-",
       h > 0 ? String(h) : "-",
-      String(item.qty),
-      formatCurrency(Number(item.unit_price)),
+      String(qty),
+      formatCurrency(unitPrice),
       formatCurrency(Number(item.total)),
     ];
   });
