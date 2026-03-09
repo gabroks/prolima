@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBudgets, useBudgetCount, useUpdateBudgetStatus, useDeleteBudget, useDuplicateBudget, type BudgetWithItems } from "@/hooks/useBudgets";
 import { usePayments } from "@/hooks/usePayments";
+import { useClients } from "@/hooks/useClients";
 import {
   Search, FileText, CheckCircle, XCircle, Clock, Eye, Copy, FilePlus,
   ArrowUpDown, DollarSign, TrendingUp, Send, AlertCircle, Trash2, Download, Pencil,
