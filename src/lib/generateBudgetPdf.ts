@@ -4,7 +4,28 @@ import type { BudgetWithItems } from "@/hooks/useBudgets";
 import type { DbCompanySettings } from "@/hooks/useCompanySettings";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
-const PRIMARY: [number, number, number] = [45, 138, 94];
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  };
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+function getThemePrimary(): [number, number, number] {
+  const saved = localStorage.getItem("app-theme-primary");
+  if (saved) {
+    const parts = saved.match(/([\d.]+)/g);
+    if (parts && parts.length >= 3) {
+      return hslToRgb(Number(parts[0]), Number(parts[1]), Number(parts[2]));
+    }
+  }
+  return [45, 138, 94]; // default green
+}
+
 const DARK: [number, number, number] = [30, 30, 30];
 const GRAY: [number, number, number] = [120, 120, 120];
 const GOLD: [number, number, number] = [218, 165, 32];
@@ -14,7 +35,7 @@ function drawRoundedRect(doc: jsPDF, x: number, y: number, w: number, h: number,
   doc.roundedRect(x, y, w, h, r, r, style);
 }
 
-function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, borderColor: [number, number, number] = PRIMARY, fillColor?: [number, number, number]) {
+function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, borderColor: [number, number, number] = [45, 138, 94], fillColor?: [number, number, number]) {
   if (fillColor) {
     doc.setFillColor(...fillColor);
   }
@@ -23,8 +44,8 @@ function drawSectionBox(doc: jsPDF, x: number, y: number, w: number, h: number, 
   drawRoundedRect(doc, x, y, w, h, 2, fillColor ? "FD" : "S");
 }
 
-function drawSectionTitle(doc: jsPDF, title: string, x: number, y: number, w: number) {
-  doc.setFillColor(...PRIMARY);
+function drawSectionTitle(doc: jsPDF, title: string, x: number, y: number, w: number, color: [number, number, number] = [45, 138, 94]) {
+  doc.setFillColor(...color);
   doc.rect(x, y, w, 7, "F");
   doc.setTextColor(...WHITE);
   doc.setFont("helvetica", "bold");
@@ -48,6 +69,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 }
 
 export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCompanySettings | null) {
+  const PRIMARY = getThemePrimary();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -115,7 +137,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Client info box (gold border) ───
   const clientBoxH = 16;
-  drawSectionTitle(doc, "INFORMAÇÕES DO CLIENTE", margin, y, contentWidth);
+  drawSectionTitle(doc, "INFORMAÇÕES DO CLIENTE", margin, y, contentWidth, PRIMARY);
   y += 7;
   drawSectionBox(doc, margin, y, contentWidth, clientBoxH, GOLD);
   doc.setFont("helvetica", "bold");
@@ -234,7 +256,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Payment terms box ───
   if (budget.payment_terms) {
-    drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth);
+    drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, 10, [200, 200, 200]);
     doc.setFont("helvetica", "normal");
@@ -285,7 +307,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Observations box ───
   if (budget.general_notes) {
-    drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth);
+    drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth, PRIMARY);
     y += 7;
     const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth - 6);
     const noteBoxH = Math.max(10, noteLines.length * 4 + 6);
