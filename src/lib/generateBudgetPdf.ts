@@ -283,7 +283,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Totals ───
   const totalLinesCount = 2 + (Number(budget.total_discount) > 0 ? 1 : 0) + (Number(budget.freight) > 0 ? 1 : 0) + (Number(budget.other_costs) > 0 ? 1 : 0);
-  ensureSpace(totalLinesCount * 6 + 12);
+  ensureSpace(totalLinesCount * 6 + 12, true);
 
   const valX = pageWidth - margin;
   const labelX = valX - 50;
