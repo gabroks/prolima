@@ -326,7 +326,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   if (budget.general_notes) {
     const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth - 6);
     const noteBoxH = Math.max(10, noteLines.length * 4 + 6);
-    ensureSpace(noteBoxH + 11);
+    ensureSpace(noteBoxH + 11, true);
     drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, noteBoxH, [200, 200, 200]);
