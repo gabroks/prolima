@@ -73,14 +73,13 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 12;
+  const margin = 10;
   const contentWidth = pageWidth - margin * 2;
-  const footerHeight = 35;
-  const pageBottom = pageHeight - margin; // full usable space
-  const lastSectionBottom = pageHeight - footerHeight - margin; // when footer must fit
+  const footerHeight = 28;
+  const pageBottom = pageHeight - margin;
+  const lastSectionBottom = pageHeight - footerHeight - margin;
   let y = margin;
 
-  /** ensureSpace: by default uses full page; pass reserveFooter=true for final sections */
   const ensureSpace = (needed: number, reserveFooter = false) => {
     const limit = reserveFooter ? lastSectionBottom : pageBottom;
     if (y + needed > limit) {
@@ -89,129 +88,121 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     }
   };
 
-  // ─── Header ───
-  let logoEndX = margin;
+  // ─── Header (compact) ───
   if (company?.logo) {
     try {
       const logoData = await loadImageAsBase64(company.logo);
-      if (logoData) {
-        doc.addImage(logoData, "PNG", margin, y, 40, 18);
-        logoEndX = margin + 42;
-      }
+      if (logoData) doc.addImage(logoData, "PNG", margin, y, 32, 14);
     } catch { /* no logo */ }
   }
 
-  // Title (center)
   doc.setFillColor(...PRIMARY);
-  const titleW = 70;
+  const titleW = 60;
   const titleX = (pageWidth - titleW) / 2;
-  drawRoundedRect(doc, titleX, y, titleW, 18, 3, "F");
+  drawRoundedRect(doc, titleX, y, titleW, 14, 3, "F");
   doc.setTextColor(...WHITE);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("ORÇAMENTO", pageWidth / 2, y + 8, { align: "center" });
-  doc.setFontSize(10);
-  doc.text(budget.number, pageWidth / 2, y + 15, { align: "center" });
+  doc.setFontSize(14);
+  doc.text("ORÇAMENTO", pageWidth / 2, y + 6, { align: "center" });
+  doc.setFontSize(9);
+  doc.text(budget.number, pageWidth / 2, y + 12, { align: "center" });
 
-  // PIX QR Code (right)
   if (company?.pix_qr_code) {
     try {
       const qrData = await loadImageAsBase64(company.pix_qr_code);
-      if (qrData) {
-        doc.addImage(qrData, "PNG", pageWidth - margin - 25, y - 2, 25, 25);
-      }
+      if (qrData) doc.addImage(qrData, "PNG", pageWidth - margin - 20, y - 1, 20, 20);
     } catch { /* no qr */ }
   }
 
-  y += 24;
+  y += 17;
 
-  // ─── Company info box ───
-  drawSectionBox(doc, margin, y, contentWidth, 18, PRIMARY, [248, 248, 248]);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(...DARK);
+  // ─── Company info (compact) ───
   const companyName = company?.nome_fantasia || company?.razao_social || "EMPRESA";
-  doc.text(companyName, margin + 3, y + 5);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...GRAY);
-  const companyLines: string[] = [];
-  if (company?.phone) companyLines.push(`Tel: ${company.phone}`);
-  if (company?.email) companyLines.push(`Email: ${company.email}`);
+  const companyInfoParts: string[] = [];
+  if (company?.phone) companyInfoParts.push(`Tel: ${company.phone}`);
+  if (company?.email) companyInfoParts.push(company.email);
   const address = [company?.street, company?.neighborhood, company?.city, company?.state].filter(Boolean).join(", ");
-  if (address) companyLines.push(address);
-  companyLines.forEach((line, i) => {
-    doc.text(line, margin + 3, y + 9 + i * 3.5);
-  });
+  if (address) companyInfoParts.push(address);
 
-  y += 22;
-
-  // ─── Client info box (gold border) ───
-  const clientBoxH = 16;
-  drawSectionTitle(doc, "INFORMAÇÕES DO CLIENTE", margin, y, contentWidth, PRIMARY);
-  y += 7;
-  drawSectionBox(doc, margin, y, contentWidth, clientBoxH, GOLD);
+  drawSectionBox(doc, margin, y, contentWidth, 12, PRIMARY, [248, 248, 248]);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...DARK);
-  doc.text(budget.client_name, margin + 3, y + 5);
+  doc.text(companyName, margin + 3, y + 4.5);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(...GRAY);
-  y += clientBoxH + 8;
+  if (companyInfoParts.length > 0) {
+    doc.text(companyInfoParts.join("  |  "), margin + 3, y + 9);
+  }
+  y += 14;
 
-  // ─── Dates row ───
-  ensureSpace(16);
-  const dateColW = contentWidth / 3;
-  const dateBoxH = 12;
+  // ─── Client + Dates in same row ───
+  drawSectionTitle(doc, "CLIENTE", margin, y, contentWidth * 0.55, PRIMARY);
+  drawSectionTitle(doc, "DATAS", margin + contentWidth * 0.57, y, contentWidth * 0.43, PRIMARY);
+  y += 7;
+
+  // Client box
+  const clientW = contentWidth * 0.55;
+  drawSectionBox(doc, margin, y, clientW, 10, GOLD);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...DARK);
+  doc.text(budget.client_name, margin + 3, y + 6);
+
+  // Dates inline
+  const datesX = margin + contentWidth * 0.57;
+  const datesW = contentWidth * 0.43;
+  const dateColW = datesW / 3;
   const dates = [
     { label: "EMISSÃO", value: formatDate(budget.created_at) },
     { label: "VALIDADE", value: budget.validity_date ? formatDate(budget.validity_date) : "—" },
-    { label: "PREV. ENTREGA", value: budget.delivery_date ? formatDate(budget.delivery_date) : "—" },
+    { label: "ENTREGA", value: budget.delivery_date ? formatDate(budget.delivery_date) : "—" },
   ];
   dates.forEach((d, i) => {
-    const dx = margin + i * dateColW;
-    drawSectionBox(doc, dx, y, dateColW, dateBoxH, [200, 200, 200]);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
+    const dx = datesX + i * dateColW;
+    drawSectionBox(doc, dx, y, dateColW, 10, [200, 200, 200]);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6);
     doc.setTextColor(...GRAY);
-    doc.text(d.label, dx + dateColW / 2, y + 4, { align: "center" });
+    doc.text(d.label, dx + dateColW / 2, y + 3.5, { align: "center" });
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(7.5);
     doc.setTextColor(...DARK);
-    doc.text(d.value, dx + dateColW / 2, y + 9.5, { align: "center" });
+    doc.text(d.value, dx + dateColW / 2, y + 8, { align: "center" });
   });
-  y += dateBoxH + 4;
+  y += 13;
 
   // ─── Service description ───
   if (budget.service_description) {
+    doc.setFontSize(8);
     const descLines = doc.splitTextToSize(budget.service_description, contentWidth);
-    const descH = descLines.length * 3.5 + 13;
+    const descH = descLines.length * 3 + 8;
     ensureSpace(descH);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
+    doc.setFontSize(8.5);
     doc.setTextColor(...PRIMARY);
     doc.text("DESCRIÇÃO DO SERVIÇO", margin, y);
     doc.setDrawColor(...PRIMARY);
     doc.setLineWidth(0.3);
-    doc.line(margin, y + 1.5, margin + 55, y + 1.5);
-    y += 5;
+    doc.line(margin, y + 1.2, margin + 45, y + 1.2);
+    y += 4;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(...DARK);
     doc.text(descLines, margin, y);
-    y += descLines.length * 3.5 + 8;
+    y += descLines.length * 3 + 3;
   }
 
   // ─── Materials table ───
-  ensureSpace(15);
+  ensureSpace(12);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   doc.setTextColor(...PRIMARY);
   doc.text("MATERIAIS E SERVIÇOS", margin, y);
   doc.setDrawColor(...PRIMARY);
   doc.setLineWidth(0.3);
-  doc.line(margin, y + 1.5, margin + 55, y + 1.5);
+  doc.line(margin, y + 1.2, margin + 45, y + 1.2);
   y += 2;
 
   const items = budget.budget_items || [];
@@ -238,10 +229,10 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     startY: y,
     head: tableHead,
     body: tableBody,
-    margin: { left: margin, right: margin, bottom: margin + 5 },
+    margin: { left: margin, right: margin, bottom: margin + 3 },
     styles: {
-      fontSize: 8,
-      cellPadding: 2.5,
+      fontSize: 7,
+      cellPadding: 1.8,
       lineColor: [220, 220, 220],
       lineWidth: 0.2,
     },
@@ -249,54 +240,54 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
       fillColor: PRIMARY,
       textColor: WHITE,
       fontStyle: "bold",
-      fontSize: 7.5,
+      fontSize: 7,
     },
     alternateRowStyles: {
       fillColor: [250, 250, 250],
     },
     columnStyles: {
-      0: { halign: "center", cellWidth: 8 },
+      0: { halign: "center", cellWidth: 7 },
       1: { cellWidth: "auto" },
-      2: { halign: "center", cellWidth: 14 },
-      3: { halign: "center", cellWidth: 12 },
-      4: { halign: "center", cellWidth: 12 },
-      5: { halign: "center", cellWidth: 14 },
-      6: { halign: "right", cellWidth: 24 },
-      7: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+      2: { halign: "center", cellWidth: 12 },
+      3: { halign: "center", cellWidth: 10 },
+      4: { halign: "center", cellWidth: 10 },
+      5: { halign: "center", cellWidth: 12 },
+      6: { halign: "right", cellWidth: 22 },
+      7: { halign: "right", cellWidth: 26, fontStyle: "bold" },
     },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 4;
+  y = (doc as any).lastAutoTable.finalY + 3;
 
-  // ─── Payment terms box ───
+  // ─── Payment terms (inline) ───
   if (budget.payment_terms) {
-    ensureSpace(24, true);
-    drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth, PRIMARY);
+    ensureSpace(14, true);
+    drawSectionTitle(doc, "PAGAMENTO:", margin, y, contentWidth, PRIMARY);
     y += 7;
-    drawSectionBox(doc, margin, y, contentWidth, 10, [200, 200, 200]);
+    drawSectionBox(doc, margin, y, contentWidth, 8, [200, 200, 200]);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(...DARK);
     doc.text(budget.payment_terms, margin + 3, y + 5);
-    y += 14;
+    y += 10;
   }
 
   // ─── Totals ───
   const totalLinesCount = 2 + (Number(budget.total_discount) > 0 ? 1 : 0) + (Number(budget.freight) > 0 ? 1 : 0) + (Number(budget.other_costs) > 0 ? 1 : 0);
-  ensureSpace(totalLinesCount * 6 + 12, true);
+  ensureSpace(totalLinesCount * 5 + 8, true);
 
   const valX = pageWidth - margin;
-  const labelX = valX - 50;
-  const totalsX = pageWidth - margin - 70;
+  const labelX = valX - 45;
+  const totalsX = pageWidth - margin - 65;
 
   const addTotalLine = (label: string, value: string, bold = false, color: [number, number, number] = DARK) => {
     doc.setFont("helvetica", bold ? "bold" : "normal");
-    doc.setFontSize(bold ? 12 : 9);
+    doc.setFontSize(bold ? 10 : 8);
     doc.setTextColor(...GRAY);
     doc.text(label, labelX, y, { align: "right" });
     doc.setTextColor(...color);
     doc.text(value, valX, y, { align: "right" });
-    y += bold ? 8 : 5;
+    y += bold ? 6 : 4.5;
   };
 
   addTotalLine("Subtotal:", formatCurrency(Number(budget.subtotal)));
@@ -316,69 +307,66 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   }
 
   doc.setDrawColor(200, 200, 200);
-  doc.line(totalsX, y - 2, valX, y - 2);
-  y += 2;
+  doc.line(totalsX, y - 1, valX, y - 1);
+  y += 1.5;
 
   addTotalLine("TOTAL:", formatCurrency(Number(budget.total)), true, PRIMARY);
-  y += 4;
+  y += 2;
 
-  // ─── Observations box ───
+  // ─── Observations ───
   if (budget.general_notes) {
+    doc.setFontSize(7.5);
     const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth - 6);
-    const noteBoxH = Math.max(10, noteLines.length * 4 + 6);
-    ensureSpace(noteBoxH + 11, true);
+    const noteBoxH = Math.max(8, noteLines.length * 3.5 + 4);
+    ensureSpace(noteBoxH + 9, true);
     drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, noteBoxH, [200, 200, 200]);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(...DARK);
-    doc.text(noteLines, margin + 3, y + 5);
-    y += noteBoxH + 4;
+    doc.text(noteLines, margin + 3, y + 4);
+    y += noteBoxH + 2;
   }
 
-  // ─── Footer with signatures (ALWAYS on last page, at bottom) ───
+  // ─── Footer with signatures (last page, bottom) ───
   const drawFooter = () => {
-    const footerY = pageHeight - 30;
+    const footerY = pageHeight - 24;
 
-    // Separator line
     doc.setDrawColor(...PRIMARY);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(0.4);
     doc.line(margin, footerY, pageWidth - margin, footerY);
 
-    // Company name + CNPJ centered
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(...DARK);
     const footerName = company?.razao_social || company?.nome_fantasia || "";
     const footerCnpj = company?.cnpj ? ` - CNPJ: ${company.cnpj}` : "";
-    doc.text(footerName + footerCnpj, pageWidth / 2, footerY + 5, { align: "center" });
+    doc.text(footerName + footerCnpj, pageWidth / 2, footerY + 4, { align: "center" });
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(6.5);
     doc.setTextColor(...GRAY);
     const contactLine = [company?.phone, company?.email].filter(Boolean).join(" | ");
     if (contactLine) {
-      doc.text(contactLine, pageWidth / 2, footerY + 9, { align: "center" });
+      doc.text(contactLine, pageWidth / 2, footerY + 7.5, { align: "center" });
     }
 
-    // Signature lines
-    const sigY = footerY + 18;
-    const sigWidth = 60;
+    const sigY = footerY + 14;
+    const sigWidth = 55;
 
     doc.setDrawColor(...DARK);
     doc.setLineWidth(0.3);
     doc.line(margin, sigY, margin + sigWidth, sigY);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(6.5);
     doc.setTextColor(...GRAY);
-    doc.text("Assinatura Cliente", margin + sigWidth / 2, sigY + 4, { align: "center" });
+    doc.text("Assinatura Cliente", margin + sigWidth / 2, sigY + 3.5, { align: "center" });
 
     doc.line(pageWidth - margin - sigWidth, sigY, pageWidth - margin, sigY);
-    doc.text("Assinatura Empresa", pageWidth - margin - sigWidth / 2, sigY + 4, { align: "center" });
+    doc.text("Assinatura Empresa", pageWidth - margin - sigWidth / 2, sigY + 3.5, { align: "center" });
   };
 
-  // Draw footer on the current (last) page
   drawFooter();
 
   return doc;
