@@ -75,13 +75,15 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
-  const footerHeight = 35; // space reserved for footer+signatures
-  const maxY = pageHeight - footerHeight - margin;
+  const footerHeight = 35;
+  const pageBottom = pageHeight - margin; // full usable space
+  const lastSectionBottom = pageHeight - footerHeight - margin; // when footer must fit
   let y = margin;
 
-  /** Check if we need a new page; if so, add one and reset y */
-  const ensureSpace = (needed: number) => {
-    if (y + needed > maxY) {
+  /** ensureSpace: by default uses full page; pass reserveFooter=true for final sections */
+  const ensureSpace = (needed: number, reserveFooter = false) => {
+    const limit = reserveFooter ? lastSectionBottom : pageBottom;
+    if (y + needed > limit) {
       doc.addPage();
       y = margin;
     }
@@ -236,7 +238,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     startY: y,
     head: tableHead,
     body: tableBody,
-    margin: { left: margin, right: margin, bottom: footerHeight + margin },
+    margin: { left: margin, right: margin, bottom: margin + 5 },
     styles: {
       fontSize: 8,
       cellPadding: 2.5,
@@ -268,7 +270,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Payment terms box ───
   if (budget.payment_terms) {
-    ensureSpace(24);
+    ensureSpace(24, true);
     drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, 10, [200, 200, 200]);
@@ -281,7 +283,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Totals ───
   const totalLinesCount = 2 + (Number(budget.total_discount) > 0 ? 1 : 0) + (Number(budget.freight) > 0 ? 1 : 0) + (Number(budget.other_costs) > 0 ? 1 : 0);
-  ensureSpace(totalLinesCount * 6 + 12);
+  ensureSpace(totalLinesCount * 6 + 12, true);
 
   const valX = pageWidth - margin;
   const labelX = valX - 50;
@@ -324,7 +326,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   if (budget.general_notes) {
     const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth - 6);
     const noteBoxH = Math.max(10, noteLines.length * 4 + 6);
-    ensureSpace(noteBoxH + 11);
+    ensureSpace(noteBoxH + 11, true);
     drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, noteBoxH, [200, 200, 200]);
