@@ -75,10 +75,19 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
+  const footerHeight = 35; // space reserved for footer+signatures
+  const maxY = pageHeight - footerHeight - margin;
   let y = margin;
 
+  /** Check if we need a new page; if so, add one and reset y */
+  const ensureSpace = (needed: number) => {
+    if (y + needed > maxY) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
   // ─── Header ───
-  // Logo (left)
   let logoEndX = margin;
   if (company?.logo) {
     try {
@@ -147,10 +156,10 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...GRAY);
-  // We don't have client phone/email on budget, just show name
   y += clientBoxH + 8;
 
   // ─── Dates row ───
+  ensureSpace(16);
   const dateColW = contentWidth / 3;
   const dateBoxH = 12;
   const dates = [
@@ -174,6 +183,9 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Service description ───
   if (budget.service_description) {
+    const descLines = doc.splitTextToSize(budget.service_description, contentWidth);
+    const descH = descLines.length * 3.5 + 13;
+    ensureSpace(descH);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(...PRIMARY);
@@ -185,12 +197,12 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(...DARK);
-    const descLines = doc.splitTextToSize(budget.service_description, contentWidth);
     doc.text(descLines, margin, y);
     y += descLines.length * 3.5 + 8;
   }
 
   // ─── Materials table ───
+  ensureSpace(15);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...PRIMARY);
@@ -224,7 +236,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     startY: y,
     head: tableHead,
     body: tableBody,
-    margin: { left: margin, right: margin },
+    margin: { left: margin, right: margin, bottom: footerHeight + margin },
     styles: {
       fontSize: 8,
       cellPadding: 2.5,
@@ -256,6 +268,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Payment terms box ───
   if (budget.payment_terms) {
+    ensureSpace(24);
     drawSectionTitle(doc, "FORMAS DE PAGAMENTO:", margin, y, contentWidth, PRIMARY);
     y += 7;
     drawSectionBox(doc, margin, y, contentWidth, 10, [200, 200, 200]);
@@ -267,10 +280,12 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   }
 
   // ─── Totals ───
-  const totalsX = pageWidth - margin - 70;
-  const valX = pageWidth - margin;
+  const totalLinesCount = 2 + (Number(budget.total_discount) > 0 ? 1 : 0) + (Number(budget.freight) > 0 ? 1 : 0) + (Number(budget.other_costs) > 0 ? 1 : 0);
+  ensureSpace(totalLinesCount * 6 + 12);
 
+  const valX = pageWidth - margin;
   const labelX = valX - 50;
+  const totalsX = pageWidth - margin - 70;
 
   const addTotalLine = (label: string, value: string, bold = false, color: [number, number, number] = DARK) => {
     doc.setFont("helvetica", bold ? "bold" : "normal");
@@ -307,10 +322,11 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
 
   // ─── Observations box ───
   if (budget.general_notes) {
-    drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth, PRIMARY);
-    y += 7;
     const noteLines = doc.splitTextToSize(budget.general_notes, contentWidth - 6);
     const noteBoxH = Math.max(10, noteLines.length * 4 + 6);
+    ensureSpace(noteBoxH + 11);
+    drawSectionTitle(doc, "OBSERVAÇÕES:", margin, y, contentWidth, PRIMARY);
+    y += 7;
     drawSectionBox(doc, margin, y, contentWidth, noteBoxH, [200, 200, 200]);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
@@ -319,46 +335,49 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     y += noteBoxH + 4;
   }
 
-  // ─── Footer with signatures ───
-  const footerY = pageHeight - 30;
+  // ─── Footer with signatures (ALWAYS on last page, at bottom) ───
+  const drawFooter = () => {
+    const footerY = pageHeight - 30;
 
-  // Separator line
-  doc.setDrawColor(...PRIMARY);
-  doc.setLineWidth(0.5);
-  doc.line(margin, footerY, pageWidth - margin, footerY);
+    // Separator line
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(0.5);
+    doc.line(margin, footerY, pageWidth - margin, footerY);
 
-  // Company name + CNPJ centered
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(...DARK);
-  const footerName = company?.razao_social || company?.nome_fantasia || "";
-  const footerCnpj = company?.cnpj ? ` - CNPJ: ${company.cnpj}` : "";
-  doc.text(footerName + footerCnpj, pageWidth / 2, footerY + 5, { align: "center" });
+    // Company name + CNPJ centered
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...DARK);
+    const footerName = company?.razao_social || company?.nome_fantasia || "";
+    const footerCnpj = company?.cnpj ? ` - CNPJ: ${company.cnpj}` : "";
+    doc.text(footerName + footerCnpj, pageWidth / 2, footerY + 5, { align: "center" });
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(...GRAY);
-  const contactLine = [company?.phone, company?.email].filter(Boolean).join(" | ");
-  if (contactLine) {
-    doc.text(contactLine, pageWidth / 2, footerY + 9, { align: "center" });
-  }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...GRAY);
+    const contactLine = [company?.phone, company?.email].filter(Boolean).join(" | ");
+    if (contactLine) {
+      doc.text(contactLine, pageWidth / 2, footerY + 9, { align: "center" });
+    }
 
-  // Signature lines
-  const sigY = footerY + 18;
-  const sigWidth = 60;
+    // Signature lines
+    const sigY = footerY + 18;
+    const sigWidth = 60;
 
-  // Client signature
-  doc.setDrawColor(...DARK);
-  doc.setLineWidth(0.3);
-  doc.line(margin, sigY, margin + sigWidth, sigY);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(...GRAY);
-  doc.text("Assinatura Cliente", margin + sigWidth / 2, sigY + 4, { align: "center" });
+    doc.setDrawColor(...DARK);
+    doc.setLineWidth(0.3);
+    doc.line(margin, sigY, margin + sigWidth, sigY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...GRAY);
+    doc.text("Assinatura Cliente", margin + sigWidth / 2, sigY + 4, { align: "center" });
 
-  // Company signature
-  doc.line(pageWidth - margin - sigWidth, sigY, pageWidth - margin, sigY);
-  doc.text("Assinatura Empresa", pageWidth - margin - sigWidth / 2, sigY + 4, { align: "center" });
+    doc.line(pageWidth - margin - sigWidth, sigY, pageWidth - margin, sigY);
+    doc.text("Assinatura Empresa", pageWidth - margin - sigWidth / 2, sigY + 4, { align: "center" });
+  };
+
+  // Draw footer on the current (last) page
+  drawFooter();
 
   return doc;
 }
