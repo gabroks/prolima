@@ -75,13 +75,15 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
-  const footerHeight = 35; // space reserved for footer+signatures
-  const maxY = pageHeight - footerHeight - margin;
+  const footerHeight = 35;
+  const pageBottom = pageHeight - margin; // full usable space
+  const lastSectionBottom = pageHeight - footerHeight - margin; // when footer must fit
   let y = margin;
 
-  /** Check if we need a new page; if so, add one and reset y */
-  const ensureSpace = (needed: number) => {
-    if (y + needed > maxY) {
+  /** ensureSpace: by default uses full page; pass reserveFooter=true for final sections */
+  const ensureSpace = (needed: number, reserveFooter = false) => {
+    const limit = reserveFooter ? lastSectionBottom : pageBottom;
+    if (y + needed > limit) {
       doc.addPage();
       y = margin;
     }
