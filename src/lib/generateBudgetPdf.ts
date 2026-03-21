@@ -238,7 +238,7 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
     startY: y,
     head: tableHead,
     body: tableBody,
-    margin: { left: margin, right: margin, bottom: footerHeight + margin },
+    margin: { left: margin, right: margin, bottom: margin + 5 },
     styles: {
       fontSize: 8,
       cellPadding: 2.5,
