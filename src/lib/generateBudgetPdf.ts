@@ -206,13 +206,13 @@ export async function generateBudgetPdf(budget: BudgetWithItems, company?: DbCom
   y += 2;
 
   const items = budget.budget_items || [];
-  const tableHead = [["#", "DESCRIÇÃO", "UN", "L", "A", "QTD", "PREÇO", "SUBTOTAL"]];
+  const tableHead = [["#", "DESCRIÇÃO", "UN", "L", "A", "QTD", "Valor Unit.", "SUBTOTAL"]];
   const tableBody = items.map((item, i) => {
     const w = Number(item.width);
     const h = Number(item.height);
     const desc = item.material_name + (item.notes ? `\nObs: ${item.notes}` : "");
     const qty = Number(item.qty);
-    const unitPrice = qty === 1 ? Number(item.total) : Number(item.unit_price);
+    const unitPrice = qty > 0 ? Number(item.total) / qty : Number(item.unit_price);
     return [
       String(i + 1),
       desc,
